@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Zalo
+GenericName=Nhan tin
+Comment=Zalo Desktop cho Linux
+Exec=zalo %U
+Icon=io.github.zalolinux.Zalo
+Terminal=false
+Type=Application
+Categories=Network;InstantMessaging;Chat;
+StartupWMClass=zalo

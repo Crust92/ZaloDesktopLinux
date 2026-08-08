@@ -1,0 +1,16 @@
+# Nguon tai ve (khong commit binary)
+sources/
+jxlbin/
+
+# San pham dung
+stage/
+build-dir/
+.flatpak-builder/
+.work/
+
+# Rac
+*.dmg
+*.snap
+*.zip
+*.flatpak
+*~
