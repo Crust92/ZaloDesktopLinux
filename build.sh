@@ -9,6 +9,8 @@
 #   ./build.sh --from-source   # ghep lai tu dau: can .dmg macOS + .snap
 #   ./build.sh --check         # chi kiem tra ban va, khong dung
 #
+# ZALO_STAGE_ONLY=1 : dung o buoc ap ban va, khong dung Flatpak (dung cho CI snap)
+#
 # Bien moi truong khi dung --from-source:
 #   ZALO_DMG=/duong/dan/ZaloSetup-universal-<ver>.dmg
 #   ZALO_SNAP=/duong/dan/zalo-linux_<ver>.snap
@@ -79,6 +81,12 @@ if [[ "$MODE" == "--check" ]]; then
   exit 0
 fi
 python3 "$HERE/patches/apply-patches.py" "$STAGE/app" "--profile=$PROFILE"
+
+# CI dung snap chi can `stage/` da ap ban va, khong can buoc Flatpak.
+if [[ "${ZALO_STAGE_ONLY:-}" == "1" ]]; then
+  say "Xong (ZALO_STAGE_ONLY=1): stage/ da san sang o $STAGE"
+  exit 0
+fi
 
 # ------------------------------------------------------------------- flatpak
 say "5/5 Dung va cai Flatpak"

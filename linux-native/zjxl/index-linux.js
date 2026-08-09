@@ -29,7 +29,14 @@ const DJXL = findBin('djxl');
 const CJXL = findBin('cjxl');
 
 function findBin(name) {
-  const dirs = ['/app/bin', '/usr/bin', '/usr/local/bin', '/bin'];
+  // Thu tu tim: Flatpak (/app/bin) -> Snap ($SNAP/usr/bin) -> he thong.
+  // Trong snap, binary cua chinh snap nam duoi $SNAP chu khong phai /usr/bin.
+  const dirs = ['/app/bin'];
+  if (process.env.SNAP) {
+    dirs.push(path.join(process.env.SNAP, 'usr', 'bin'));
+    dirs.push(path.join(process.env.SNAP, 'bin'));
+  }
+  dirs.push('/usr/bin', '/usr/local/bin', '/bin');
   for (const d of dirs) {
     const p = path.join(d, name);
     try { fs.accessSync(p, fs.constants.X_OK); return p; } catch (_) {}

@@ -231,6 +231,29 @@ Vì sao **không** viết `mp4thumb`: app có sẵn đường lui no-op
 (`generateThumbnail → Promise.resolve("")`), và ảnh đại diện video vốn lấy từ
 `thumbUrl` của máy chủ. Viết nó phải gánh thêm ffmpeg cho lợi ích rất mỏng.
 
+## Dựng tự động (GitHub Actions)
+
+`.github/workflows/build.yml` dựng cả snap lẫn Flatpak trên CI sạch, không phụ
+thuộc máy cá nhân:
+
+- Chạy tay ở tab **Actions** (chọn hồ sơ bản vá), hoặc tự chạy khi đẩy tag `v*`.
+- Job `sources` tải `.dmg` mới nhất + Electron + snap **một lần** rồi chia cho
+  hai job dựng, thay vì mỗi job tải lại ~900 MB.
+- Đẩy tag `v*` sẽ tạo GitHub Release kèm cả hai gói.
+
+Muốn CI đẩy thẳng lên Snap Store thì nạp secret `SNAPCRAFT_STORE_CREDENTIALS`:
+
+```bash
+snapcraft export-login --snaps zalo-desktop \
+  --acls package_access,package_push,package_update,package_release -
+```
+
+Vì sao dựng snap trên CI chứ không dựng ở máy: snap phải khớp `base` đã khai
+(`core22` = Ubuntu 22.04). Dựng trên máy 26.04 sẽ liên kết với `glibc` mới, và
+snap sẽ hỏng trên máy người dùng. Cùng lý do đó, `djxl`/`cjxl` trong snap lấy từ
+`stage-packages` (kho Ubuntu 22.04) chứ không chép từ máy dựng — còn bản Flatpak
+thì vẫn dùng `jxlbin/`.
+
 ## Đưa lên store
 
 ### Flathub

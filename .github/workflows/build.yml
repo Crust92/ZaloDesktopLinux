@@ -1,0 +1,144 @@
+name: Dựng gói
+
+# Chạy tay từ tab Actions, hoặc tự chạy khi đẩy tag v* (vd v26.8.10).
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Hồ sơ bản vá'
+        type: choice
+        options: [full, default, compat]
+        default: full
+      publish_snap:
+        description: 'Đẩy snap lên store (cần secret SNAPCRAFT_STORE_CREDENTIALS)'
+        type: boolean
+        default: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  ZALO_PROFILE: ${{ github.event.inputs.profile || 'full' }}
+
+jobs:
+  # ---------------------------------------------------------------- nguồn
+  # Tải .dmg (~900MB) + Electron + snap một lần rồi chia cho cả hai job dựng,
+  # thay vì mỗi job tải lại.
+  sources:
+    name: Tải nguồn
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài công cụ giải nén
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full squashfs-tools
+
+      - name: Tải nguồn
+        run: ./fetch-sources.sh
+
+      - name: Ghép và áp bản vá
+        env:
+          ZALO_STAGE_ONLY: '1'
+        run: |
+          ZALO_DMG="$(ls sources/*.dmg | head -1)" \
+          ZALO_SNAP=sources/zalo-linux.snap \
+          ELECTRON_ZIP="$(ls sources/electron-*.zip | head -1)" \
+          ./build.sh --from-source
+
+      - name: Nén stage
+        run: tar -I 'zstd -3 -T0' -cf stage.tar.zst stage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage
+          path: stage.tar.zst
+          retention-days: 1
+
+  # ---------------------------------------------------------------- snap
+  snap:
+    name: Snap
+    needs: sources
+    runs-on: ubuntu-latest
+    outputs:
+      snap-file: ${{ steps.build.outputs.snap }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: stage }
+      - run: sudo apt-get update && sudo apt-get install -y zstd && tar -I zstd -xf stage.tar.zst
+
+      - id: build
+        uses: snapcore/action-build@v1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.build.outputs.snap }}
+
+      # Chỉ đẩy khi được yêu cầu VÀ đã nạp secret. Lấy token bằng:
+      #     snapcraft export-login --snaps zalo-desktop \
+      #       --acls package_access,package_push,package_update,package_release -
+      - name: Đẩy lên Snap Store
+        if: ${{ github.event.inputs.publish_snap == 'true' }}
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        uses: snapcore/action-publish@v1
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: edge
+
+  # ---------------------------------------------------------------- flatpak
+  flatpak:
+    name: Flatpak
+    needs: sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: stage }
+      - run: sudo apt-get update && sudo apt-get install -y zstd flatpak flatpak-builder libjxl-tools && tar -I zstd -xf stage.tar.zst
+
+      - name: Cài runtime
+        run: |
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+
+      - name: Chuẩn bị jxlbin
+        run: ./fetch-sources.sh jxl
+
+      - name: Dựng và xuất bundle
+        run: |
+          flatpak-builder --user --disable-rofiles-fuse --force-clean \
+            --repo=repo build-dir ac.d3v.ZaloLinux.yml
+          VER=$(python3 -c "import json;print(json.load(open('stage/app/package.json'))['version'])")
+          flatpak build-bundle repo "ZaloDesktop-${VER}-x86_64.flatpak" ac.d3v.ZaloLinux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: '*.flatpak'
+
+  # ---------------------------------------------------------------- phát hành
+  release:
+    name: Phát hành
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [snap, flatpak]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/snap/*.snap
+            dist/flatpak/*.flatpak
+          body: |
+            Dựng tự động từ nguồn chính thức của Zalo.
+            Hồ sơ bản vá: `${{ env.ZALO_PROFILE }}`.
+
+            Cài Flatpak:
+            ```
+            flatpak install --user ZaloDesktop-*.flatpak
+            ```
