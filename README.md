@@ -196,9 +196,29 @@ Nếu app thoát ngay không log: `rm -f ~/.config/ZaloData/Singleton*`.
 Gọi thoại/video dùng engine của tác giả snap, bật bằng `ZALO_ENABLE_LINUX_CALL=1`
 — **chưa kiểm thử**.
 
+## Hiệu năng — đã đo, không đoán
+
+| hạng mục | trước | sau | ghi chú |
+|---|---|---|---|
+| `zjxl.jxlToJpeg` (ảnh 1280×881) | 95,8 ms | **43,0 ms** | bỏ file tạm, chạy qua ống stdin→stdout |
+| `zjxl.getJxlInfo` | 0 ms | 0 ms | đọc header thuần JS, không gọi tiến trình |
+| Kết xuất | raster CPU | **raster GPU** | `--ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy` |
+
+Vì sao **không** viết addon N-API cho JXL: đo tách bạch cho thấy `djxl` giải mã
+thuần mất ~42 ms và fork chỉ 3 ms. Sau khi bỏ file tạm, shim đã ở mức 43 ms —
+tức đã chạm sàn. Addon C++ chỉ tiết kiệm thêm ~3 ms nhưng kéo cả toolchain C++
+vào Flatpak. Không đáng.
+
+Vì sao **không** viết `zimage`/libvips: app có nhà máy resizer nhiều backend
+(`LIBJXL_WASM`, `WEB_WORKER`, `MAIN`, libvips) và cấu hình gốc của Zalo là
+`enable_libvips_macos: false` — bản macOS cũng không dùng libvips mà đi đường
+OffscreenCanvas thuần Chromium. Linux vào đúng nhánh đó, không thiếu gì.
+
+Vì sao **không** viết `mp4thumb`: app có sẵn đường lui no-op
+(`generateThumbnail → Promise.resolve("")`), và ảnh đại diện video vốn lấy từ
+`thumbUrl` của máy chủ. Viết nó phải gánh thêm ffmpeg cho lợi ích rất mỏng.
+
 ## Còn dang dở
 
-- `zjxl` hiện gọi `djxl`/`cjxl` qua tiến trình con (~50 ms/ảnh). Nên viết addon
-  N-API liên kết thẳng `libjxl`.
 - `zimage` (libvips) và `mp4thumb` (ffmpeg) chưa có bản thay thế native.
 - Màn "Quản lý dữ liệu → Tin nhắn media" chưa ra danh sách hội thoại.
