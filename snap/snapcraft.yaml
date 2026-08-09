@@ -7,9 +7,10 @@
 #
 # Dung:
 #     ./fetch-sources.sh
-#     ZALO_PROFILE=compat ./build.sh --from-source   # dung stage/
+#     ZALO_PROFILE=full ./build.sh --from-source   # dung stage/
 #     snapcraft
 name: zalo-desktop
+title: Zalo Desktop
 adopt-info: zalo
 summary: Ung dung nhan tin Zalo cho Linux
 description: |

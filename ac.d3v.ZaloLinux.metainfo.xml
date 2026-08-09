@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>ac.d3v.ZaloLinux</id>
 
-  <name>Zalo</name>
+  <name>Zalo Desktop</name>
   <summary>Ứng dụng nhắn tin Zalo cho Linux</summary>
   <summary xml:lang="en">Zalo messaging client for Linux</summary>
 

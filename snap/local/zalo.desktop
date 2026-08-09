@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Zalo
+Name=Zalo Desktop
 GenericName=Nhan tin
 Comment=Zalo Desktop cho Linux
 Exec=zalo-desktop %U
