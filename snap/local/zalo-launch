@@ -1,0 +1,24 @@
+#!/bin/bash
+# Launcher Zalo cho Snap. Cung logic voi ban Flatpak nhung duong dan khac
+# va khong co zypak (snap tu confine bang AppArmor + seccomp).
+ARGS=(--no-sandbox)
+
+[ -n "$WAYLAND_DISPLAY" ] && [ -z "$ZALO_FORCE_WAYLAND" ] && unset WAYLAND_DISPLAY
+
+gpu_tuning() {
+    [ "$ZALO_NO_GPU_TUNING" = "1" ] && return 1
+    [ "$LIBGL_ALWAYS_SOFTWARE" = "1" ] && return 1
+    compgen -G "/dev/dri/renderD*" >/dev/null 2>&1 || return 1
+    return 0
+}
+
+if [ "$ZALO_DISABLE_GPU" = "1" ]; then
+    ARGS+=(--disable-gpu --in-process-gpu)
+elif gpu_tuning; then
+    ARGS+=(--enable-gpu-rasterization --enable-zero-copy)
+    [ "$ZALO_FORCE_GPU" = "1" ] && ARGS+=(--ignore-gpu-blocklist)
+fi
+
+export PATH="$SNAP/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$SNAP/usr/lib:$LD_LIBRARY_PATH"
+exec "$SNAP/opt/zalo/electron/electron" "$SNAP/opt/zalo/app" "${ARGS[@]}" "$@"

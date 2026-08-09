@@ -4,7 +4,7 @@ Ghép **app.asar chính thức của Zalo (bản macOS)** với **phần native 
 đóng gói Flatpak. Không phải bản mô phỏng, không dùng Wine — vẫn là mã Zalo gốc,
 chỉ thay những mảnh mà Zalo chưa phát hành cho Linux.
 
-App-id: `io.github.zalolinux.Zalo` · Electron 22.3.27 · runtime `org.freedesktop.Platform//25.08`
+App-id: `ac.d3v.ZaloLinux` · Electron 22.3.27 · runtime `org.freedesktop.Platform//25.08`
 
 ---
 
@@ -51,9 +51,22 @@ Mượn từ snap `zalo-linux` (tác giả nnluc073) **chỉ phần Linux**: hai
 nối `$zFeatures.zwalker.*`), và thư mục `qt-call-cap-linux` (engine gọi thoại).
 Toàn bộ `pc-dist/` giữ nguyên bản chính thức.
 
+## Hồ sơ bản vá
+
+Chọn bằng `ZALO_PROFILE=` hoặc `--profile=`:
+
+| hồ sơ | gồm | dùng khi |
+|---|---|---|
+| `compat` | P1, P5 | **Gần nhất với "đóng gói nguyên trạng"** — chỉ bù phần nền tảng Zalo không phát hành cho Linux, không đổi hành vi nào. Dành cho bản lên store. Đánh đổi: Ảnh/File/Link trong "Thông tin hội thoại" rỗng, nút Đồng bộ tin nhắn không phản ứng, không xem được media cũ. |
+| `default` | P1–P7 | Thêm các bản vá **bật lại giá trị mặc định của chính Zalo** mà máy chủ tắt riêng cho client Linux. Không khai sai danh tính thiết bị. |
+| `full` | P1–P8 | Thêm P8 (khai client type Windows) để mở khoá E2EE/zCloud. |
+
+Lưu ý: **không có mức "không sửa gì"**. Zalo không phát hành native module Linux nào,
+`file-utilities` ném thẳng `Unsupported OS` — app không khởi động nổi. P5 là bắt buộc tuyệt đối.
+
 ## Các bản vá (`patches/apply-patches.py`)
 
-Đều **bắt buộc**, đều idempotent, và dùng regex thay vì offset cố định vì tên
+Đều idempotent, và dùng regex thay vì offset cố định vì tên
 biến rút gọn và hash tên file đổi theo từng bản Zalo.
 
 | | Nội dung | Mất thì hỏng gì |
@@ -169,7 +182,7 @@ Chuỗi gọi khi mở tab Ảnh/Video:
 Zalo đã đổi cấu trúc bundle. Cách dò lại:
 
 ```bash
-flatpak run io.github.zalolinux.Zalo --remote-debugging-port=9222
+flatpak run ac.d3v.ZaloLinux --remote-debugging-port=9222
 ```
 
 rồi dùng Chrome DevTools Protocol. Mẹo lấy `__webpack_require__` từ ngoài:
@@ -184,12 +197,12 @@ giá trị mặc định trong bundle để tìm cờ nào bị máy chủ tắt
 ## Chạy
 
 ```bash
-flatpak run io.github.zalolinux.Zalo
+flatpak run ac.d3v.ZaloLinux
 ```
 
 Launcher tự `unset WAYLAND_DISPLAY` để ép X11 — Electron 22 trên Wayland không vẽ
 được cửa sổ. Dữ liệu phiên nằm ở
-`~/.var/app/io.github.zalolinux.Zalo/config/ZaloData`.
+`~/.var/app/ac.d3v.ZaloLinux/config/ZaloData`.
 
 Nếu app thoát ngay không log: `rm -f ~/.config/ZaloData/Singleton*`.
 
@@ -217,6 +230,31 @@ OffscreenCanvas thuần Chromium. Linux vào đúng nhánh đó, không thiếu 
 Vì sao **không** viết `mp4thumb`: app có sẵn đường lui no-op
 (`generateThumbnail → Promise.resolve("")`), và ảnh đại diện video vốn lấy từ
 `thumbUrl` của máy chủ. Viết nó phải gánh thêm ffmpeg cho lợi ích rất mỏng.
+
+## Đưa lên store
+
+### Flathub
+
+- App-id `ac.d3v.ZaloLinux` khớp tên miền `d3v.ac` (bắt buộc).
+- Dùng **zypak** thay `--no-sandbox` — Flathub bắt buộc với mọi app Electron.
+  Đã kiểm chứng: tiến trình `zypak-helper child` và `zypak-sandbox` chạy thật.
+- `metainfo.xml` đã có; **còn thiếu ảnh chụp màn hình** (tối thiểu một ảnh ≥ 620×351).
+- Người duyệt sẽ hỏi về `--filesystem=home`. Câu trả lời: Zalo dùng hộp thoại file
+  của Electron chưa đi qua portal, bỏ quyền này thì không gửi/lưu file được.
+- Vì là phần mềm độc quyền và **bản đã sửa**, cần chuẩn bị bằng chứng được phép
+  phát hành để dán vào PR.
+- Manifest hiện **đóng gói kèm** mã Zalo. Nếu người duyệt không chấp nhận phát hành
+  lại binary, phải chuyển sang `extra-data` (tải trên máy người dùng lúc cài). Vướng:
+  môi trường `apply_extra` không có công cụ giải nén `.dmg`, nên phải đóng gói thêm
+  `7z` vào flatpak.
+
+### Snap Store
+
+- **Tên `zalo-linux` đã bị chiếm** (tác giả nnluc073 — chính người mà bản này mượn
+  hai native module). `snap/snapcraft.yaml` đang đề xuất `zalo-desktop`; phải chạy
+  `snapcraft register <tên>` trước khi đẩy.
+- `base: core22`, `confinement: strict`, dùng extension `gnome`.
+- Snapcraft cho tải lúc dựng nên không vướng chuyện `extra-data` như Flathub.
 
 ## Còn dang dở
 

@@ -2,8 +2,11 @@
 """
 Áp toàn bộ bản vá Linux lên cây app Zalo (bản macOS đã ghép native module Linux).
 
-Dùng:  ./apply-patches.py <duong-dan-app>       # vd: ~/zalo-pkg/stage/app
-       ./apply-patches.py <duong-dan-app> --check   # chi kiem tra, khong ghi
+Dung:  ./apply-patches.py <duong-dan-app> [--profile=compat|default|full] [--check]
+
+       --profile=compat   chi phan CAN DE CHAY (gan nhat voi 'dong goi nguyen trang')
+       --profile=default  + bat lai mac dinh cua chinh Zalo bi may chu tat (mac dinh)
+       --profile=full     + khai client type Windows de mo khoa E2EE/zCloud
 
 Moi ban va deu IDEMPOTENT: chay lai nhieu lan van an toan. Neu mot ban va
 khong tim thay diem neo (Zalo doi cau truc bundle) thi script BAO LOI va thoat
@@ -17,8 +20,45 @@ import re
 import sys
 import glob
 
-APP = os.path.abspath(os.path.expanduser(sys.argv[1])) if len(sys.argv) > 1 else None
+APP = None
+for _a in sys.argv[1:]:
+    if not _a.startswith('-'):
+        APP = os.path.abspath(os.path.expanduser(_a))
+        break
 CHECK_ONLY = '--check' in sys.argv
+
+# ---------------------------------------------------------------- ho so ban va
+# Ba muc, chon bang --profile=<ten>. Mac dinh `default`.
+#
+#   compat   Chi nhung gi CAN DE CHAY DUOC tren Linux. Day la muc gan nhat voi
+#            "dong goi nguyen trang": khong doi hanh vi nao cua app, chi bu vao
+#            phan nen tang ma Zalo khong phat hanh cho Linux.
+#            Danh cho ban dua len store.
+#            Danh doi: Anh/File/Link trong "Thong tin hoi thoai" RONG, nut
+#            "Dong bo tin nhan" khong phan ung, khong xem duoc media cu.
+#
+#   default  compat + cac ban va BAT LAI GIA TRI MAC DINH CUA CHINH ZALO ma may
+#            chu tat rieng cho client Linux (P2,P3,P4,P6,P7). Khong khai sai
+#            danh tinh thiet bi.
+#
+#   full     default + P8 (khai client type 24/Windows). Mo khoa E2EE + zCloud,
+#            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
+PROFILES = {
+    'compat':  ['P1', 'P5'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'],
+}
+PROFILE = 'default'
+for _a in sys.argv[1:]:
+    if _a.startswith('--profile='):
+        PROFILE = _a.split('=', 1)[1]
+if PROFILE not in PROFILES:
+    sys.exit('Loi: --profile phai la mot trong: %s' % ', '.join(PROFILES))
+ACTIVE = set(PROFILES[PROFILE])
+
+
+def enabled(tag):
+    return tag in ACTIVE
 
 if not APP or not os.path.isdir(APP):
     sys.exit('Loi: can duong dan thu muc app. Vd: ./apply-patches.py ~/zalo-pkg/stage/app')
@@ -366,14 +406,14 @@ def p5_linux_shims():
 
 
 print('Ap ban va len: %s%s' % (APP, '  [CHI KIEM TRA]' if CHECK_ONLY else ''))
-p1_bootstrap()
-p2_sync_isenable()
-p3_load_media_enable()
-p4_load_media_config()
-p6_file_enable_cloud()
-p7_never_expire()
-p8_client_type()
-p5_linux_shims()
+print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
+for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
+                  ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
+                  ('P7', p7_never_expire), ('P8', p8_client_type), ('P5', p5_linux_shims)):
+    if enabled(_tag):
+        _fn()
+    else:
+        print('  [BO  ] %-46s khong thuoc ho so %s' % (_tag, PROFILE))
 
 failed = [r[0] for r in results if not r[1] and not r[2]]
 print()

@@ -1,0 +1,105 @@
+# Snap cho Zalo Desktop tren Linux.
+#
+# LUU Y VE TEN: `zalo-linux` DA BI CHIEM (tac gia nnluc073 — chinh la nguoi ma
+# ban nay muon hai native module Linux). Ten duoi day chi la de xuat; phai dang
+# ky truoc khi day len:
+#     snapcraft register zalo-desktop
+#
+# Dung:
+#     ./fetch-sources.sh
+#     ZALO_PROFILE=compat ./build.sh --from-source   # dung stage/
+#     snapcraft
+name: zalo-desktop
+adopt-info: zalo
+summary: Ung dung nhan tin Zalo cho Linux
+description: |
+  Zalo la ung dung nhan tin pho bien tai Viet Nam. Zalo Group co phat hanh ban
+  desktop cho Windows va macOS nhung chua co ban Linux chinh thuc.
+
+  Ban dong goi nay chay chinh ma nguon Zalo Desktop chinh thuc tren Electron,
+  kem mot lop tuong thich Linux cho nhung module nen tang ma Zalo chua phat
+  hanh cho he dieu hanh nay. Khong phai ban mo phong, khong dung Wine.
+
+  Day khong phai ban phat hanh chinh thuc cua Zalo Group.
+
+base: core22
+grade: stable
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+    build-for: amd64
+
+parts:
+  zalo:
+    plugin: dump
+    source: .
+    # stage/ do build.sh sinh ra (da ap ban va theo ZALO_PROFILE)
+    organize:
+      stage/app: opt/zalo/app
+      stage/electron: opt/zalo/electron
+      jxlbin/djxl: usr/bin/djxl
+      jxlbin/cjxl: usr/bin/cjxl
+      jxlbin/libjpeg.so.8: usr/lib/libjpeg.so.8
+      jxlbin/libgif.so.7: usr/lib/libgif.so.7
+      snap/local/zalo-launch: bin/zalo
+      snap/local/zalo.desktop: usr/share/applications/zalo.desktop
+      icon.png: usr/share/icons/hicolor/512x512/apps/zalo.png
+    stage:
+      - -fetch-sources.sh
+      - -build.sh
+      - -patches
+      - -linux-native
+      - -README.md
+      - -ac.d3v.ZaloLinux.yml
+      - -ac.d3v.ZaloLinux.metainfo.xml
+      - -ac.d3v.ZaloLinux.desktop
+    override-pull: |
+      craftctl default
+      # Lay so hieu phien ban tu chinh app.asar da giai nen
+      VER="$(python3 -c "import json,sys; print(json.load(open('stage/app/package.json'))['version'])" 2>/dev/null || echo 0)"
+      craftctl set version="$VER"
+    build-packages:
+      - python3
+    stage-packages:
+      - libnss3
+      - libnspr4
+      - libatk1.0-0
+      - libatk-bridge2.0-0
+      - libcups2
+      - libdrm2
+      - libxkbcommon0
+      - libxcomposite1
+      - libxdamage1
+      - libxfixes3
+      - libxrandr2
+      - libgbm1
+      - libasound2
+      - libatspi2.0-0
+      - libsecret-1-0
+      - libgtk-3-0
+
+apps:
+  zalo-desktop:
+    command: bin/zalo
+    extensions: [gnome]
+    desktop: usr/share/applications/zalo.desktop
+    common-id: ac.d3v.ZaloLinux
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - desktop
+      - desktop-legacy
+      - x11
+      - wayland
+      - unity7
+      - opengl
+      - audio-playback
+      - audio-record
+      - camera
+      - browser-support
+      - screen-inhibit-control
+      - password-manager-service

@@ -1,0 +1,58 @@
+app-id: ac.d3v.ZaloLinux
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: zalo
+separate-locales: false
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  # Zalo dung hop thoai file cua Electron (chua di qua portal), nen can quyen
+  # doc/ghi thu muc nha de dinh kem va luu file. Nguoi duyet Flathub thuong hoi
+  # ve dong nay — cau tra loi: bo no thi khong gui/luu file duoc.
+  - --filesystem=home
+  - --filesystem=xdg-download
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --env=TMPDIR=/var/tmp
+  # Di tru du lieu tu app-id cu (io.github.zalolinux.Zalo). Bo dong nay sau vai ban.
+  - --filesystem=~/.var/app/io.github.zalolinux.Zalo:ro
+
+modules:
+  # Zypak: cho phep sandbox cua Chromium chay ben trong Flatpak, thay vi phai
+  # dung --no-sandbox. Flathub bat buoc voi moi app Electron.
+  - name: zypak
+    # Zypak dung Makefile (khong phai meson) va cai thang vao $FLATPAK_DEST.
+    buildsystem: simple
+    build-commands:
+      - make -j$(nproc)
+      - make install
+    sources:
+      - type: git
+        url: https://github.com/refi64/zypak
+        tag: v2025.09
+
+  - name: zalo
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/zalo /app/electron /app/bin
+      - cp -r stage/app/. /app/zalo/
+      - cp -r stage/electron/. /app/electron/
+      - chmod +x /app/electron/electron /app/electron/chrome-sandbox || true
+      - install -Dm755 jxlbin/djxl /app/bin/djxl
+      - install -Dm755 jxlbin/cjxl /app/bin/cjxl
+      - install -Dm755 jxlbin/libjpeg.so.8 /app/lib/libjpeg.so.8
+      - install -Dm755 jxlbin/libgif.so.7 /app/lib/libgif.so.7
+      - install -Dm755 zalo-launch.sh /app/bin/zalo
+      - install -Dm644 icon.png /app/share/icons/hicolor/512x512/apps/ac.d3v.ZaloLinux.png
+      - install -Dm644 ac.d3v.ZaloLinux.desktop /app/share/applications/ac.d3v.ZaloLinux.desktop
+      - install -Dm644 ac.d3v.ZaloLinux.metainfo.xml /app/share/metainfo/ac.d3v.ZaloLinux.metainfo.xml
+    sources:
+      - type: dir
+        path: .

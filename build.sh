@@ -2,6 +2,10 @@
 # Dung Zalo Desktop chay native tren Linux, dong goi Flatpak.
 #
 #   ./build.sh                 # dung lai tu stage/ da co (nhanh, hay dung nhat)
+#
+# Chon ho so ban va bang ZALO_PROFILE=compat|default|full (mac dinh default).
+#   compat  = chi phan can de chay, gan nhat voi "dong goi nguyen trang"
+#   full    = them P8 (khai client type Windows) de mo khoa E2EE/zCloud
 #   ./build.sh --from-source   # ghep lai tu dau: can .dmg macOS + .snap
 #   ./build.sh --check         # chi kiem tra ban va, khong dung
 #
@@ -12,9 +16,10 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APPID=io.github.zalolinux.Zalo
+APPID=ac.d3v.ZaloLinux
 STAGE="$HERE/stage"
 MODE="${1:-}"
+PROFILE="${ZALO_PROFILE:-default}"   # compat | default | full
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 die() { printf '\033[31mLoi: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -70,10 +75,10 @@ fi
 # ------------------------------------------------------------------- ban va
 say "4/5 Ap ban va Linux"
 if [[ "$MODE" == "--check" ]]; then
-  python3 "$HERE/patches/apply-patches.py" "$STAGE/app" --check
+  python3 "$HERE/patches/apply-patches.py" "$STAGE/app" "--profile=$PROFILE" --check
   exit 0
 fi
-python3 "$HERE/patches/apply-patches.py" "$STAGE/app"
+python3 "$HERE/patches/apply-patches.py" "$STAGE/app" "--profile=$PROFILE"
 
 # ------------------------------------------------------------------- flatpak
 say "5/5 Dung va cai Flatpak"

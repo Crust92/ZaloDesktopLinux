@@ -2,8 +2,8 @@
 Name=Zalo
 GenericName=Nhan tin
 Comment=Zalo Desktop cho Linux
-Exec=zalo %U
-Icon=io.github.zalolinux.Zalo
+Exec=zalo-desktop %U
+Icon=${SNAP}/usr/share/icons/hicolor/512x512/apps/zalo.png
 Terminal=false
 Type=Application
 Categories=Network;InstantMessaging;Chat;
