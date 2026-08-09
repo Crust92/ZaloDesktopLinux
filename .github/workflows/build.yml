@@ -120,11 +120,30 @@ jobs:
           name: flatpak
           path: '*.flatpak'
 
+  # ---------------------------------------------------------------- appimage
+  appimage:
+    name: AppImage
+    needs: sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: stage }
+      - run: sudo apt-get update && sudo apt-get install -y zstd libjxl-tools libfuse2 && tar -I zstd -xf stage.tar.zst
+      - name: Chuẩn bị jxlbin
+        run: ./fetch-sources.sh jxl
+      - name: Dựng AppImage
+        run: ./build-appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+
   # ---------------------------------------------------------------- phát hành
   release:
     name: Phát hành
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [snap, flatpak]
+    needs: [snap, flatpak, appimage]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -134,6 +153,7 @@ jobs:
           files: |
             dist/snap/*.snap
             dist/flatpak/*.flatpak
+            dist/appimage/*.AppImage
           body: |
             Dựng tự động từ nguồn chính thức của Zalo.
             Hồ sơ bản vá: `${{ env.ZALO_PROFILE }}`.
@@ -141,4 +161,8 @@ jobs:
             Cài Flatpak:
             ```
             flatpak install --user ZaloDesktop-*.flatpak
+            ```
+            Hoặc chạy thẳng AppImage, không cần cài gì:
+            ```
+            chmod +x ZaloDesktop-*.AppImage && ./ZaloDesktop-*.AppImage
             ```

@@ -17,3 +17,8 @@ build-dir/
 
 # Kho ostree khi xuat bundle
 repo/
+
+# AppImage
+dist/
+.appdir/
+.appimagetool
