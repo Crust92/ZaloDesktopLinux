@@ -22,7 +22,11 @@ import sys
 CHUNK = 4 << 20
 
 
-def unpack(asar_path, out_dir):
+def unpack(asar_path, out_dir, only=None):
+    """only: danh sach tien to duong dan; chi giai nhung file khop (None = tat ca).
+
+    Dung khi chi can vai module trong mot .asar ~900MB (vd lay phan Linux tu snap).
+    """
     with open(asar_path, 'rb') as f:
         head = f.read(16)
         if len(head) < 16:
@@ -42,6 +46,9 @@ def unpack(asar_path, out_dir):
                     os.makedirs(os.path.join(out_dir, path), exist_ok=True)
                     made[0] += 1
                     walk(info, path)
+                    continue
+                if only is not None and not any(
+                        path == p or path.startswith(p.rstrip('/') + os.sep) for p in only):
                     continue
                 if info.get('unpacked'):
                     # nam o app.asar.unpacked/ ben canh — chep o buoc khac
@@ -77,6 +84,9 @@ def unpack(asar_path, out_dir):
             for n in names:
                 src = os.path.join(root, n)
                 rel = os.path.relpath(src, unpacked)
+                if only is not None and not any(
+                        rel == p or rel.startswith(p.rstrip('/') + os.sep) for p in only):
+                    continue
                 dst = os.path.join(out_dir, rel)
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
@@ -85,5 +95,6 @@ def unpack(asar_path, out_dir):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        sys.exit('Dung: ./unpack-asar.py <app.asar> <thu-muc-dich>')
-    unpack(sys.argv[1], os.path.abspath(os.path.expanduser(sys.argv[2])))
+        sys.exit('Dung: ./unpack-asar.py <app.asar> <thu-muc-dich> [tien-to ...]')
+    unpack(sys.argv[1], os.path.abspath(os.path.expanduser(sys.argv[2])),
+           sys.argv[3:] or None)

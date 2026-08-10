@@ -54,8 +54,20 @@ if [[ "$MODE" == "--from-source" ]]; then
 
   say "2/5 Giai nen snap (chi lay phan Linux)"
   unsquashfs -f -d "$WORK/snap" "$ZALO_SNAP" >/dev/null
+  # Snap thuong nguon co hai bo cuc: (a) resources/app/ giai san — ban cu;
+  # (b) resources/app.asar — ban moi. Voi (b) chi rut dung phan Linux can,
+  # khong giai ca asar ~900MB.
   SNAPAPP="$(find "$WORK/snap" -maxdepth 6 -type d -name 'app' -path '*resources*' | head -1)"
-  [[ -n "$SNAPAPP" ]] || die 'khong tim thay resources/app trong snap'
+  if [[ -z "$SNAPAPP" ]]; then
+    SNAPASAR="$(find "$WORK/snap" -maxdepth 6 -name 'app.asar' -path '*resources*' | head -1)"
+    [[ -n "$SNAPASAR" ]] || die 'khong tim thay resources/app hoac resources/app.asar trong snap'
+    SNAPAPP="$WORK/snapapp"
+    python3 "$HERE/patches/unpack-asar.py" "$SNAPASAR" "$SNAPAPP" \
+      native/nativelibs/db-cross-v4/prebuilt/linux \
+      native/nativelibs/sqlite3/binding/napi-v6-linux-x64 \
+      native/qt-call-cap-linux \
+      bootstrap.js
+  fi
   # Chi 2 binary native + bootstrap shim + engine goi thoai. KHONG chep de len
   # ma nguon chinh thuc trong pc-dist.
   for p in \
