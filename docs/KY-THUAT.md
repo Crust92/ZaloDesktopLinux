@@ -254,9 +254,9 @@ snapcraft export-login --snaps zalo-desktop \
 ```
 
 Vì sao dựng snap trên CI chứ không dựng ở máy: snap phải khớp `base` đã khai
-(`core22` = Ubuntu 22.04). Dựng trên máy 26.04 sẽ liên kết với `glibc` mới, và
+(`core24` = Ubuntu 24.04). Dựng trên máy 26.04 sẽ liên kết với `glibc` mới, và
 snap sẽ hỏng trên máy người dùng. Cùng lý do đó, `djxl`/`cjxl` trong snap lấy từ
-`stage-packages` (kho Ubuntu 22.04) chứ không chép từ máy dựng — còn bản Flatpak
+`stage-packages` (kho Ubuntu 24.04) chứ không chép từ máy dựng — còn bản Flatpak
 thì vẫn dùng `jxlbin/`.
 
 ## Đưa lên store
@@ -281,7 +281,10 @@ thì vẫn dùng `jxlbin/`.
 - **Tên `zalo-linux` đã bị chiếm** (tác giả nnluc073 — chính người mà bản này mượn
   hai native module). `snap/snapcraft.yaml` đang đề xuất `zalo-desktop`; phải chạy
   `snapcraft register <tên>` trước khi đẩy.
-- `base: core22`, `confinement: strict`, dùng extension `gnome`.
+- `base: core24`, `confinement: strict`, dùng extension `gnome`.
+- **Vì sao core24 chứ không core22**: `libjxl-tools` (cho `djxl`) **không tồn tại**
+  trong Ubuntu 22.04 — đã kiểm chứng bằng Launchpad API (jammy 0 gói, noble 3 gói).
+  Đổi base kéo theo phải đổi 6 gói sang tên `*t64` (chuyển đổi time_t 64-bit của 24.04).
 - Snapcraft cho tải lúc dựng nên không vướng chuyện `extra-data` như Flathub.
 
 ## Còn dang dở

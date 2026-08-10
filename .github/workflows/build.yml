@@ -71,6 +71,10 @@ jobs:
 
       - id: build
         uses: snapcore/action-build@v1
+        with:
+          # Mac dinh action bat SNAPCRAFT_BUILD_INFO -> truyen --enable-manifest,
+          # co nay DA BI BO o core24 nen snapcraft se bao loi. Tat di.
+          build-info: false
 
       - uses: actions/upload-artifact@v4
         with:

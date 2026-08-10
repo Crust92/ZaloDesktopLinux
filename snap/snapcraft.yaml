@@ -23,14 +23,15 @@ description: |
 
   Day khong phai ban phat hanh chinh thuc cua Zalo Group.
 
-base: core22
+base: core24
 grade: stable
 confinement: strict
 compression: lzo
 
-architectures:
-  - build-on: amd64
-    build-for: amd64
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
 
 parts:
   zalo:
@@ -61,15 +62,17 @@ parts:
     build-packages:
       - python3
     stage-packages:
-      # djxl/cjxl phai lay tu kho core22, KHONG chep tu may dung — binary dung
+      # djxl/cjxl phai lay tu kho cua base, KHONG chep tu may dung — binary dung
       # tren Ubuntu moi se lech glibc va khong chay trong snap.
+      # LUU Y: libjxl-tools KHONG co trong Ubuntu 22.04 (core22) — da kiem chung
+      # bang Launchpad: jammy 0 goi, noble 3 goi. Vi vay base phai la core24.
       - libjxl-tools
       - ffmpeg
       - libnss3
       - libnspr4
-      - libatk1.0-0
-      - libatk-bridge2.0-0
-      - libcups2
+      - libatk1.0-0t64
+      - libatk-bridge2.0-0t64
+      - libcups2t64
       - libdrm2
       - libxkbcommon0
       - libxcomposite1
@@ -77,10 +80,10 @@ parts:
       - libxfixes3
       - libxrandr2
       - libgbm1
-      - libasound2
-      - libatspi2.0-0
+      - libasound2t64
+      - libatspi2.0-0t64
       - libsecret-1-0
-      - libgtk-3-0
+      - libgtk-3-0t64
 
 apps:
   zalo-desktop:
