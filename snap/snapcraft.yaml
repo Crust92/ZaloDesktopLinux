@@ -64,6 +64,7 @@ parts:
       # djxl/cjxl phai lay tu kho core22, KHONG chep tu may dung — binary dung
       # tren Ubuntu moi se lech glibc va khong chay trong snap.
       - libjxl-tools
+      - ffmpeg
       - libnss3
       - libnspr4
       - libatk1.0-0

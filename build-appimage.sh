@@ -62,6 +62,17 @@ HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="$HERE/usr/bin:$PATH"
 export LD_LIBRARY_PATH="$HERE/usr/lib:${LD_LIBRARY_PATH:-}"
 
+# Ho so du lieu rieng cho AppImage.
+# AppImage chay NGOAI sandbox nen mac dinh no dung ~/.config/ZaloData — trung
+# voi ban cai cu (snap/deb) va KHAC hoan toan kho cua Flatpak. Chay lan luot hai
+# ban se lam moi ban thay mot phien khac nhau, bat dang nhap lai, va dang nhap
+# nhieu thiet bi co the da phien kia ra — ma dang xuat thi Zalo XOA media cuc bo.
+# Vi vay mac dinh tach rieng. Muon dung chung kho cu thi dat ZALO_SHARE_PROFILE=1.
+if [ "$ZALO_SHARE_PROFILE" != "1" ]; then
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/ZaloAppImage"
+    mkdir -p "$XDG_CONFIG_HOME"
+fi
+
 # AppImage khong the cai setuid cho chrome-sandbox nen buoc phai --no-sandbox.
 ARGS=(--no-sandbox)
 

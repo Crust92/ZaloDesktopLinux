@@ -19,6 +19,11 @@ finish-args:
   - --filesystem=xdg-download
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.kde.StatusNotifierWatcher
+  # Electron dang ky tray qua SNI voi ten bus org.kde.StatusNotifierItem-<pid>-<n>.
+  # Trong sandbox zypak, browser process luon la PID 2 -> ten la -2-1/-2-2.
+  # Thieu own-name nay: "Failed to get the ownership of StatusNotifierItem" -> tray hong.
+  - --own-name=org.kde.StatusNotifierItem-2-1
+  - --own-name=org.kde.StatusNotifierItem-2-2
   - --talk-name=com.canonical.AppMenu.Registrar
   - --env=TMPDIR=/var/tmp
   # Di tru du lieu tu app-id cu (io.github.zalolinux.Zalo). Bo dong nay sau vai ban.

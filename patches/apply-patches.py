@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -376,6 +376,50 @@ def p8_client_type():
         record('P8 client type 25 -> 24 (mo khoa E2EE)', False, False, 'KHONG khop')
 
 
+# ------------------------------------------------------ P9 nut goi thoai/video
+def p9_enable_call():
+    """Hien nut goi thoai va goi video.
+
+    Mac dinh trong bundle la tat:  enableCall:!1, enableVideoCall:!1
+    Sau do app doc tu may chu:
+        try{ let e = 1 == t.settings.chat.enable_call;       X.enableCall = e } catch(e){}
+        try{ let e = 1 == t.settings.chat.enable_video_call; X.enableVideoCall = e } catch(e){}
+
+    May chu KHONG gui khoi `settings.chat` cho client nay -> truy cap
+    `.enable_call` cua undefined nem loi -> try/catch nuot im -> hai co giu
+    nguyen mac dinh false -> nut goi khong bao gio hien.
+
+    Va o day chi mo NUT. Goi co ket noi duoc hay khong lai la chuyen khac:
+    `zcall` la module macOS chua ai port; engine thay the `qt-call-cap-linux`
+    cua tac gia snap co trong goi nhung CHUA KIEM THU (bat bang
+    ZALO_ENABLE_LINUX_CALL=1).
+    """
+    applied = already = 0
+    for f in bundles():
+        s = open(f, encoding='utf8', errors='ignore').read()
+        if 'enableCall' not in s:
+            continue
+        orig = s
+        # 1) lat gia tri mac dinh trong object cau hinh
+        s = s.replace('enableCall:!1,', 'enableCall:!0,')
+        s = s.replace('enableVideoCall:!1,', 'enableVideoCall:!0,')
+        # 2) ep ket qua gan tu may chu (phong khi sau nay co settings.chat voi gia tri 0)
+        s = re.sub(r'(\.enableCall=)\w+(\}catch)', r'\g<1>!0\g<2>', s)
+        s = re.sub(r'(\.enableVideoCall=)\w+(\}catch)', r'\g<1>!0\g<2>', s)
+        if s != orig:
+            if not CHECK_ONLY:
+                open(f, 'w', encoding='utf8').write(s)
+            applied += 1
+        elif 'enableCall:!0,' in s:
+            already += 1
+    if applied:
+        record('P9 hien nut goi thoai/video', True, False, '%d file' % applied)
+    elif already:
+        record('P9 hien nut goi thoai/video', False, True, 'da co san')
+    else:
+        record('P9 hien nut goi thoai/video', False, False, 'KHONG khop')
+
+
 # ------------------------------------------------------ P5 shim native Linux
 def p5_linux_shims():
     """Chep cac index-linux.js thay the .node ma Zalo khong phat hanh cho Linux."""
@@ -405,11 +449,124 @@ def p5_linux_shims():
         record('P5 shim native Linux', False, True, 'da khop')
 
 
+# ------------------------------------------------------ P11 icon tray (png thay ico)
+def p11_tray_icon():
+    """Tray tao bang nativeImage.createFromPath('favicon.ico'). Linux Electron KHONG
+    ve duoc .ico da do phan giai -> o vuong den. Thay bang favicon.png."""
+    pc = os.path.join(APP, 'pc-dist')
+    mainjs = os.path.join(APP, 'main-dist', 'main.js')
+    src_png = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            '..', 'linux-native', 'tray', 'favicon.png'))
+    if not os.path.isfile(mainjs):
+        record('P11 icon tray png', False, False, 'thieu main.js'); return
+    s = open(mainjs, encoding='utf8', errors='surrogateescape').read()
+    png_dst = os.path.join(pc, 'favicon.png')
+    have_png = os.path.isfile(png_dst)
+    patched = '"favicon.png"' in s
+    if patched and have_png:
+        record('P11 icon tray png', False, True, 'da khop'); return
+    if '"favicon.ico"' not in s and not patched:
+        record('P11 icon tray png', False, False, 'KHONG khop main.js'); return
+    if not CHECK_ONLY:
+        if not have_png:
+            # uu tien nguon linux-native, khong co thi lay favicon-128 san trong pc-dist
+            import shutil as _sh
+            if os.path.isfile(src_png):
+                _sh.copyfile(src_png, png_dst)
+            elif os.path.isfile(os.path.join(pc, 'favicon-128x128.png')):
+                _sh.copyfile(os.path.join(pc, 'favicon-128x128.png'), png_dst)
+        if not patched:
+            open(mainjs, 'w', encoding='utf8', errors='surrogateescape').write(
+                s.replace('"favicon.ico"', '"favicon.png"', 1))
+    record('P11 icon tray png', True, False, 'favicon.png')
+
+
+# ------------------------------------------------------ P12 thoat that tren Linux
+def p12_linux_quit():
+    """requestQuitApp() tren Linux gui IPC hoi renderer xac nhan thoat roi CHO —
+    hop thoai do khong hien tren Linux nen app khong bao gio thoat, va co
+    appIsRequestQuiting ket lam moi lan Thoat sau bi tu choi. Vá: Linux thoat thang."""
+    mainjs = os.path.join(APP, 'main-dist', 'main.js')
+    if not os.path.isfile(mainjs):
+        record('P12 thoat that Linux', False, False, 'thieu main.js'); return
+    s = open(mainjs, encoding='utf8', errors='surrogateescape').read()
+    if '"linux"===process.platform||this.currentPage===' in s:
+        record('P12 thoat that Linux', False, True, 'da khop'); return
+    rx = re.compile(r'(this\.currentPage===\w+\.APP_PAGE\.LOGIN\|\|this\.mainWindow\.webContents&&this\.mainWindow\.webContents\.isCrashed\(\)\|\|!\w+\.\w+\.isMainAppStarted\(\))')
+    ns, n = rx.subn(lambda m: '"linux"===process.platform||' + m.group(1), s, count=1)
+    if n == 0:
+        record('P12 thoat that Linux', False, False, 'KHONG khop requestQuitApp'); return
+    if not CHECK_ONLY:
+        open(mainjs, 'w', encoding='utf8', errors='surrogateescape').write(ns)
+    record('P12 thoat that Linux', True, False, 'requestQuitApp -> quit thang')
+
+
+# ------------------------------------------------------ P13 cua so xem anh/video co nut X
+def p13_viewer_frame():
+    """Cua so "Zalo Photo" (xem anh/video) dat titleBarStyle:"hidden" -> tren Linux
+    (Electron 22) an ca thanh tieu de lan nut dieu khien => KHONG co nut X. Ngoai ra
+    mot bien the dat frame theo getClientType()!==WIN, ma P8 gia client=Windows nen
+    frame=false. Va: tren Linux ep frame:true + bo titleBarStyle cho 3 cua so viewer."""
+    mainjs = os.path.join(APP, 'main-dist', 'main.js')
+    if not os.path.isfile(mainjs):
+        record('P13 viewer co nut X', False, False, 'thieu main.js'); return
+    s = open(mainjs, encoding='utf8', errors='surrogateescape').read()
+    if 'titleBarStyle:"linux"===process.platform?"default":"hidden"' in s:
+        record('P13 viewer co nut X', False, True, 'da khop'); return
+    a = s.count('frame:h()!==p')
+    b = s.count('frame:Object(l.getClientType)()!==l.WIN_CLIENT_TYPE')
+    c = s.count('titleBarStyle:"hidden",show:!1,resizable:!0,backgroundColor:"#1f1f1f"')
+    if not (a and c):
+        record('P13 viewer co nut X', False, False, f'KHONG khop (hp={a} ct={b} tb={c})'); return
+    s = s.replace('frame:h()!==p', 'frame:"darwin"!==process.platform')
+    s = s.replace('frame:Object(l.getClientType)()!==l.WIN_CLIENT_TYPE',
+                  'frame:"linux"===process.platform||Object(l.getClientType)()!==l.WIN_CLIENT_TYPE')
+    s = s.replace('titleBarStyle:"hidden",show:!1,resizable:!0,backgroundColor:"#1f1f1f"',
+                  'titleBarStyle:"linux"===process.platform?"default":"hidden",show:!1,resizable:!0,backgroundColor:"#1f1f1f"')
+    if not CHECK_ONLY:
+        open(mainjs, 'w', encoding='utf8', errors='surrogateescape').write(s)
+    record('P13 viewer co nut X', True, False, f'frame×{a+b}, titlebar×{c}')
+
+
+# ------------------------------------------------------ P10 thumbnail video (ffmpeg)
+def p10_mp4thumb_ffmpeg():
+    """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
+    ffmpeg (giu nguyen hop dong), va noi vao index.js o nhanh else."""
+    src_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'linux-native')
+    src = os.path.normpath(os.path.join(src_root, 'mp4thumb', 'linux-ffmpeg.js'))
+    moddir = os.path.join(APP, 'native', 'nativelibs', 'mp4thumb')
+    idx = os.path.join(moddir, 'index.js')
+    if not os.path.isfile(src) or not os.path.isfile(idx):
+        record('P10 thumbnail video ffmpeg', False, False, 'THIEU nguon/dich')
+        return
+    data = open(src, encoding='utf8').read()
+    dst = os.path.join(moddir, 'linux-ffmpeg.js')
+    s = open(idx, encoding='utf8').read()
+    old = "        } else {\n            thumbModule = createUnsupportedModule();\n        }"
+    new = ("        } else if (process.platform === 'linux') {\n"
+           "            thumbModule = require('./linux-ffmpeg.js');\n"
+           "        } else {\n            thumbModule = createUnsupportedModule();\n        }")
+    already = os.path.isfile(dst) and open(dst, encoding='utf8', errors='ignore').read() == data
+    patched = "require('./linux-ffmpeg.js')" in s
+    if already and patched:
+        record('P10 thumbnail video ffmpeg', False, True, 'da khop')
+        return
+    if old not in s and not patched:
+        record('P10 thumbnail video ffmpeg', False, False, 'KHONG khop index.js')
+        return
+    if not CHECK_ONLY:
+        open(dst, 'w', encoding='utf8').write(data)
+        if not patched:
+            open(idx, 'w', encoding='utf8').write(s.replace(old, new, 1))
+    record('P10 thumbnail video ffmpeg', True, False, 'ffmpeg backend')
+
+
 print('Ap ban va len: %s%s' % (APP, '  [CHI KIEM TRA]' if CHECK_ONLY else ''))
 print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
-                  ('P7', p7_never_expire), ('P8', p8_client_type), ('P5', p5_linux_shims)):
+                  ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P5', p5_linux_shims)):
     if enabled(_tag):
         _fn()
     else:
