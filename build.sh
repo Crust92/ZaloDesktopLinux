@@ -44,7 +44,10 @@ if [[ "$MODE" == "--from-source" ]]; then
 
   say "1/5 Giai nen .dmg macOS (nguon app.asar chinh thuc)"
   # Ban Windows KHONG dung duoc: sqlite3 trong do chi co win32-ia32.
-  7z x -o"$WORK/dmg" "$ZALO_DMG" >/dev/null
+  # 7z coi symlink "Applications" -> /Applications (shortcut chuan cua DMG macOS)
+  # la "dangerous link" va thoat code 2 du da giai nen xong phan con lai. Loai no
+  # ra va bo qua ma loi; su ton tai cua app.asar ben duoi moi la thuoc do that.
+  7z x -o"$WORK/dmg" "$ZALO_DMG" -xr'!Applications' >/dev/null 2>&1 || true
   ASAR="$(find "$WORK/dmg" -name app.asar | head -1)"
   [[ -n "$ASAR" ]] || die 'khong tim thay app.asar trong .dmg'
   python3 "$HERE/patches/unpack-asar.py" "$ASAR" "$STAGE/app"
