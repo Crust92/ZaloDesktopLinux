@@ -29,7 +29,8 @@ die() { printf '\033[31mLoi: %s\033[0m\n' "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "thieu lenh '$1' — cai bang: $2"; }
 
 need python3 'sudo apt install python3'
-need flatpak-builder 'sudo apt install flatpak-builder'
+# flatpak-builder chi can khi dung Flatpak that; buoc stage-only (CI snap) khong can.
+[[ "${ZALO_STAGE_ONLY:-}" == "1" ]] || need flatpak-builder 'sudo apt install flatpak-builder'
 
 # ---------------------------------------------------------------- from-source
 if [[ "$MODE" == "--from-source" ]]; then
