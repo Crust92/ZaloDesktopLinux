@@ -68,6 +68,12 @@ parts:
       # bang Launchpad: jammy 0 goi, noble 3 goi. Vi vay base phai la core24.
       - libjxl-tools
       - ffmpeg
+      # ffmpeg cua noble link toi libblas/liblapack (qua libavfilter). Snapcraft
+      # KHONG keo hai cai nay theo -> `ffmpeg -version` bao
+      # "libblas.so.3: cannot open shared object file" va P10 hong luc chay.
+      # Phat hien khi chay thu snap edge that, khong phai suy doan.
+      - libblas3
+      - liblapack3
       - libnss3
       - libnspr4
       - libatk1.0-0t64
