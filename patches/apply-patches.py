@@ -147,9 +147,12 @@ def p2_sync_isenable():
     Truoc:  isEnable(){const e=...offFeature,t=...enable;return!e&&t}
     Sau:    isEnable(){const e=...;const t=...;return true}
     """
+    # Ban 26.8.10 minify thanh `;return!e&&t}` — KHONG co dau cach sau `return`.
+    # Dung `\s*` de chiu ca hai dang, va luon xuat lai `return true` (co dau cach)
+    # cho khoi sinh `returntrue`.
     rx = re.compile(
         r'(isEnable\(\)\{const [\w$]+=this\.config\.get\("cross_setting\.offFeature"\),'
-        r'[\w$]+=this\.config\.get\("cross_setting\.enable"\);return )(![\w$]+&&[\w$]+)(\})'
+        r'[\w$]+=this\.config\.get\("cross_setting\.enable"\);return)\s*(![\w$]+&&[\w$]+)(\})'
     )
     applied = already = 0
     files = []
@@ -160,7 +163,7 @@ def p2_sync_isenable():
         if re.search(r'cross_setting\.enable"\);return true\}', s):
             already += 1
             continue
-        ns, n = rx.subn(lambda m: m.group(1) + 'true' + m.group(3), s)
+        ns, n = rx.subn(lambda m: m.group(1) + ' true' + m.group(3), s)
         if n:
             if not CHECK_ONLY:
                 open(f, 'w', encoding='utf8').write(ns)
@@ -542,22 +545,30 @@ def p10_mp4thumb_ffmpeg():
     data = open(src, encoding='utf8').read()
     dst = os.path.join(moddir, 'linux-ffmpeg.js')
     s = open(idx, encoding='utf8').read()
-    old = "        } else {\n            thumbModule = createUnsupportedModule();\n        }"
-    new = ("        } else if (process.platform === 'linux') {\n"
-           "            thumbModule = require('./linux-ffmpeg.js');\n"
-           "        } else {\n            thumbModule = createUnsupportedModule();\n        }")
+    # Ban 26.8.10 bo `createUnsupportedModule()`; cau truc gio la
+    #     if(process.platform === 'win32') { ... }
+    #     else { if(process.arch === 'arm64'){...} else {...} }
+    # Neo vao cuoi nhanh win32 va chen mot nhanh `else if linux` ngay sau — ben
+    # hon chuoi cung vi chiu duoc thay doi khoang trang/dinh dang.
+    rx = re.compile(
+        r"(require\(`\./win32/\$\{process\.arch\}/mp4thumb\.node`\);\s*\n\s*\})"
+        r"(\s*\n\s*else\s*\{)"
+    )
     already = os.path.isfile(dst) and open(dst, encoding='utf8', errors='ignore').read() == data
     patched = "require('./linux-ffmpeg.js')" in s
     if already and patched:
         record('P10 thumbnail video ffmpeg', False, True, 'da khop')
         return
-    if old not in s and not patched:
+    if not patched and not rx.search(s):
         record('P10 thumbnail video ffmpeg', False, False, 'KHONG khop index.js')
         return
     if not CHECK_ONLY:
         open(dst, 'w', encoding='utf8').write(data)
         if not patched:
-            open(idx, 'w', encoding='utf8').write(s.replace(old, new, 1))
+            ins = ("\\1\n        else if(process.platform === 'linux') {\n"
+                   "            thumbModule = require('./linux-ffmpeg.js');\n"
+                   "        }\\2")
+            open(idx, 'w', encoding='utf8').write(rx.sub(ins, s, count=1))
     record('P10 thumbnail video ffmpeg', True, False, 'ffmpeg backend')
 
 
