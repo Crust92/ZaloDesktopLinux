@@ -41,8 +41,8 @@
   <launchable type="desktop-id">ac.d3v.ZaloLinux.desktop</launchable>
 
   <url type="homepage">https://zalo.me</url>
-  <url type="bugtracker">https://github.com/XTCRust/ZaloDesktopLinux/issues</url>
-  <url type="vcs-browser">https://github.com/XTCRust/ZaloDesktopLinux</url>
+  <url type="bugtracker">https://github.com/Crust92/ZaloDesktopLinux/issues</url>
+  <url type="vcs-browser">https://github.com/Crust92/ZaloDesktopLinux</url>
 
   <categories>
     <category>Network</category>
@@ -70,7 +70,7 @@
        Flathub doi it nhat mot anh, kich thuoc toi thieu 620x351.
   <screenshots>
     <screenshot type="default">
-      <image>https://github.com/XTCRust/ZaloDesktopLinux/raw/main/screenshots/main.png</image>
+      <image>https://github.com/Crust92/ZaloDesktopLinux/raw/main/screenshots/main.png</image>
       <caption>Cua so tro chuyen</caption>
     </screenshot>
   </screenshots>
