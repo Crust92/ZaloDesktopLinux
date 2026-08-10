@@ -1,198 +1,67 @@
-# Zalo Desktop chạy native trên Linux (Flatpak)
+<p align="center">
+  <img src="branding/README-header.png" alt="Zalo Desktop for Linux" width="100%">
+</p>
 
-Ghép **app.asar chính thức của Zalo (bản macOS)** với **phần native Linux** rồi
-đóng gói Flatpak. Không phải bản mô phỏng, không dùng Wine — vẫn là mã Zalo gốc,
-chỉ thay những mảnh mà Zalo chưa phát hành cho Linux.
+<p align="center">
+  <img alt="License" src="https://img.shields.io/github/license/Crust92/ZaloDesktopLinux?color=a48bff">
+  <img alt="Stars" src="https://img.shields.io/github/stars/Crust92/ZaloDesktopLinux?color=ffb454">
+  <img alt="Flatpak" src="https://img.shields.io/badge/Flatpak-%E2%9C%93-4aa8ff">
+  <img alt="AppImage" src="https://img.shields.io/badge/AppImage-%E2%9C%93-4aa8ff">
+  <img alt="Snap" src="https://img.shields.io/badge/Snap-%E2%9C%93-4aa8ff">
+  <img alt="E2EE" src="https://img.shields.io/badge/E2EE%20%C2%B7%20zCloud-%E2%9C%93-3fd06a">
+</p>
 
-App-id: `ac.d3v.ZaloLinux` · Electron 22.3.27 · runtime `org.freedesktop.Platform//25.08`
+# Zalo Desktop cho Linux
 
----
+Zalo chạy **native** trên Linux — không Wine, không trình duyệt. Ghép app Zalo
+chính thức (bản macOS) với phần native Linux, vá lại cho chạy đúng, rồi đóng gói
+**Flatpak · AppImage · Snap**. Vẫn là mã Zalo gốc, chỉ bù những mảnh Zalo chưa
+phát hành cho Linux.
 
-## Dựng
+## Tính năng
+
+- ✅ Tin nhắn **mã hoá đầu-cuối (E2EE)** + đồng bộ **zCloud**
+- ✅ Xem lại **ảnh/video/file cũ** (tới tận 2019)
+- ✅ **Thu nhỏ khay**, đóng/thoát, cửa sổ xem media có nút X — đúng chuẩn Linux
+- ✅ Thumbnail video, khung cửa sổ gọn gàng
+- ⛔ **Chưa có gọi thoại/video** — engine gọi của Zalo chỉ có bản macOS/Windows
+
+## Cài đặt
+
+Tải gói mới nhất ở [Releases](https://github.com/Crust92/ZaloDesktopLinux/releases).
 
 ```bash
-./build.sh
+# Flatpak (khuyên dùng)
+flatpak install --user ./ac.d3v.ZaloLinux.flatpak
+
+# AppImage (chạy luôn, không cần cài)
+chmod +x ZaloDesktop-*.AppImage && ./ZaloDesktop-*.AppImage
 ```
 
-Dựng lại từ `stage/` đã có (nhanh). Dựng từ đầu — repo **không chứa binary**, tải nguồn trước:
+## Dựng từ mã nguồn
+
+Repo **không chứa binary** — tải nguồn trước rồi dựng:
 
 ```bash
-./fetch-sources.sh
-```
-
-Script tự lấy bản `.dmg` macOS mới nhất (theo chuyển hướng của `zalo.me/download/zalo-pc`),
-Electron 22.3.27 linux-x64, snap `zalo-linux`, và chuẩn bị `jxlbin/` từ gói `libjxl-tools`.
-Rồi:
-
-```bash
-ZALO_DMG=sources/ZaloSetup-universal-26.8.10.dmg \
-ZALO_SNAP=sources/zalo-linux.snap \
-ELECTRON_ZIP=sources/electron-v22.3.27-linux-x64.zip \
+./fetch-sources.sh   # lấy .dmg macOS + Electron + snap
 ./build.sh --from-source
 ```
 
-Chỉ kiểm tra bản vá, không dựng:
-
-```bash
-./build.sh --check
-```
-
-## Vì sao phải tự ghép
-
-Zalo **không phát hành native module Linux** ở bất kỳ bản chính thức nào. Wine
-cũng thất bại: Chromium trong Wine không dò được trạng thái mạng
-(`WSALookupServiceBegin failed`) nên tưởng máy offline và kẹt ở màn splash.
-
-Phải dùng **bản macOS**, không dùng bản Windows: `sqlite3` trong bản Windows chỉ
-có binary `win32-ia32`.
-
-Mượn từ snap `zalo-linux` (tác giả nnluc073) **chỉ phần Linux**: hai binary
-`db-cross-v4` + `sqlite3`, `bootstrap.js` (shim Linux ~30 hàm, trong đó có cầu
-nối `$zFeatures.zwalker.*`), và thư mục `qt-call-cap-linux` (engine gọi thoại).
-Toàn bộ `pc-dist/` giữ nguyên bản chính thức.
+Đã có `stage/` thì `./build.sh` dựng lại nhanh. Kiểm bản vá không dựng: `./build.sh --check`.
 
 ## Hồ sơ bản vá
 
-Chọn bằng `ZALO_PROFILE=` hoặc `--profile=`:
+Có **13 bản vá** (P1–P13) bù phần nền tảng và bật lại tính năng Zalo tắt cho Linux.
+Chọn bằng `--profile=`:
 
-| hồ sơ | gồm | dùng khi |
+| Hồ sơ | Gồm | Dùng khi |
 |---|---|---|
-| `compat` | P1, P5 | **Gần nhất với "đóng gói nguyên trạng"** — chỉ bù phần nền tảng Zalo không phát hành cho Linux, không đổi hành vi nào. Dành cho bản lên store. Đánh đổi: Ảnh/File/Link trong "Thông tin hội thoại" rỗng, nút Đồng bộ tin nhắn không phản ứng, không xem được media cũ. |
-| `default` | P1–P7 | Thêm các bản vá **bật lại giá trị mặc định của chính Zalo** mà máy chủ tắt riêng cho client Linux. Không khai sai danh tính thiết bị. |
-| `full` | P1–P8 | Thêm P8 (khai client type Windows) để mở khoá E2EE/zCloud. |
+| `compat` | P1, P5 | Chỉ đủ để chạy, không đổi hành vi. Đánh đổi: không xem được media cũ. |
+| `default` | P1–P7, P9–P13 | Bật lại mặc định của chính Zalo bị máy chủ tắt cho Linux. |
+| `full` | + P8 | Thêm khai client Windows để mở khoá **E2EE/zCloud**. |
 
-Lưu ý: **không có mức "không sửa gì"**. Zalo không phát hành native module Linux nào,
-`file-utilities` ném thẳng `Unsupported OS` — app không khởi động nổi. P5 là bắt buộc tuyệt đối.
-
-## Các bản vá (`patches/apply-patches.py`)
-
-Đều idempotent, và dùng regex thay vì offset cố định vì tên
-biến rút gọn và hash tên file đổi theo từng bản Zalo.
-
-| | Nội dung | Mất thì hỏng gì |
-|---|---|---|
-| **P1** | `bootstrap.js`: ép `frame:true` cho cửa sổ Linux, ẩn thanh menu | Cửa sổ không có nút thu nhỏ/phóng to/đóng |
-| **P2** | `isEnable()` của `cross_setting` → `return true` | Nút "Đồng bộ tin nhắn" bấm không phản ứng |
-| **P3** | `return!!X.load_media.enable` → `return!0` | Không nạp media |
-| **P4** | Ép `load_media = {enable:1, optimize_mode:1}` sau khi hợp nhất cấu hình máy chủ | **Ảnh/File/Link trong "Thông tin hội thoại" rỗng hoàn toàn** |
-| **P5** | Chép `linux-native/*/index-linux.js` (zwalker, file-utilities, zfile, zjxl) | Tính dung lượng sai, **"Quản lý dữ liệu → Tin nhắn media" quay vòng mãi**, ảnh `.jxl` không mở được |
-| **P6** | Ép `file.enable_cloud = 1` sau khi hợp nhất cấu hình máy chủ | **Không khôi phục được ảnh/file cũ từ zCloud** (CDN chỉ giữ 14 ngày) |
-| **P7** | Ép `never_expire_11 = never_expire_group = 1` (khối `image` và `file`) | App tự kết luận ảnh cũ hơn 7 ngày ở chat 1-1/nhóm là "không còn tồn tại" và **không thử tải** |
-| **P8** | `getClientType()` trả `24` (Windows) thay vì `25` (Linux) | **Không đăng ký được E2EE → không nhận được khoá zCloud → toàn bộ ảnh/file cũ không xem được.** Đọc phần đánh đổi bên dưới |
-
-### Vì sao P8 tồn tại — và đánh đổi
-
-Máy chủ Zalo **không phục vụ đăng ký E2EE cho client type 25 (Linux)**. Hậu quả dây chuyền, đo được từng bước:
-
-```
-không đăng ký Signal → không nhận được khoá riêng zCloud
-  → pcloudKey rỗng → checkUpgraded() = false
-    → updateExtMediaInfo() thoát ngay → cloudInfo = null trên toàn bộ mục
-      → không xin được link tải → ảnh/file cũ không xem được
-```
-
-Đo thực tế trên một tài khoản có **54.784 mục zCloud trải từ 2019**: `cloudInfo` khác null = **0**,
-`verified` khác null = **0**. Tỉ lệ 0/54.784 không thể là mất dữ liệu — luôn là một công tắc.
-
-Đổi `25 → 24`: ngay lần khởi động đầu tiên, `E2ee.db` sinh bản ghi `e2ee_registration` và
-`e2ee_metadata` (trước đó cả hai đều 0 dòng), và ảnh cũ xem lại được.
-
-**Đánh đổi:** máy sẽ hiện là thiết bị **Windows** trong danh sách đăng nhập của tài khoản.
-Đây là bản vá **duy nhất** trong bộ này không thuộc dạng "bật lại giá trị mặc định của chính
-Zalo" — nó khai báo sai nền tảng với máy chủ. Muốn lùi: đổi `24` về `25` rồi dựng lại, không
-mất dữ liệu.
-
-Yên tâm ở một điểm: mọi nhánh xử lý **cục bộ** (registry, chữ cái ổ đĩa, đường dẫn, updater)
-đều rẽ theo `process.platform`, **không** theo client type — nên đổi số này không làm app cư
-xử như đang chạy trên Windows.
-
-### Vì sao P4 tồn tại
-
-Máy chủ Zalo trả về `load_media = {enable:0, optimize_mode:0}` cho client này
-(mặc định trong chính bundle của Zalo là `1`). Trong repository media,
-`getMediasOfConv` đặt **toàn bộ** truy vấn bên trong
-
-```js
-if (load_media.optimize_mode && (n = await ...))
-```
-
-và **không có nhánh `else`** — cờ tắt thì hàm trả `[]` ngay lập tức (0 ms) mà
-không hề chạm cơ sở dữ liệu. P4 khôi phục lại đúng giá trị mặc định của Zalo.
-
-Cùng họ lỗi với P2 (`cross_setting.enable`) và P3.
-
-### Vì sao P6 tồn tại
-
-CDN `zdn.vn` chỉ giữ file media **14 ngày** (đã đo: ranh giới 200/404 rơi đúng
-mốc hôm nay trừ 14). Quá hạn thì phải khôi phục từ **zCloud**. Cổng quyết định
-app có coi media là "có bản sao trên cloud" hay không:
-
-```js
-K = (file.enable_indicator && file.enable_indicator_ver === 1) || cloud_send2me.enable
-W = K && file.enable_cloud && file.enable_cloud_ver === 1
-```
-
-Máy chủ trả `enable_cloud = 0` (mặc định trong bundle là `true`) → `W = false`
-→ không còn đường lấy ảnh cũ về.
-
-**Bẫy**: máy chủ nhét `enable_cloud` vào khối `settings.features.**file_indicator**`
-chứ không phải `settings.features.file` (khối `file` thường không được gửi).
-Cả hai đều merge vào cùng `config.file`, nên bản vá phải bọc **cả hai** chỗ.
-Và lưu ý `setttings` trong mã Zalo viết **ba chữ t** — không phải lỗi gõ ở đây.
-
-### Hợp đồng ẩn của `file-utilities` (thuộc P5)
-
-```js
-getDirectorySizeAsync(dir, { deep: { maxDepth: 3 } })
-//  -> { totalSize, fileCount, tree: [ { relativePath, totalSize, fileCount }, ... ] }
-```
-
-Trường **`tree` là bắt buộc** khi có `deep`. Bên gọi làm thẳng `a.tree.length`
-không kiểm tra `null`, nên thiếu nó thì ném `TypeError`, tác vụ quét từng hội
-thoại không bao giờ giải quyết (`resolve`) và màn hình quay vòng vĩnh viễn.
-
-`relativePath` là đường dẫn tương đối so với thư mục truyền vào; bên tiêu thụ
-(`calculateConvDataForResMntV2`) chỉ ánh xạ tên cấp 1:
-`video → videosSize`, `picture → imagesSize`, `file`/`fileNoise → filesSize`,
-`folder → foldersSize`, `fileThumb`/`voice`/`richThumb → othersSize`.
-
-Bố cục thư mục thật (path structure V2):
-`ZaloData/media/<uid>/ZaloDownloads/resource/<convId>/{video,picture,file,Cache,…}`
-
-Hội thoại chỉ có `Cache`/`fileThumb` sẽ bị loại khỏi danh sách vì
-`validateCalculateResult` đòi `videosSize + imagesSize + filesSize ≥ 1`.
-
-## Hai kho media — đừng nhầm
-
-| | Đường dẫn | Index | Tình trạng |
-|---|---|---|---|
-| Kho **mới** (đang dùng) | `Database/_production/<uid>/Media.db` | `convId_sendDttm_cliMsgId` | đầy dữ liệu |
-| Kho **cũ** (bỏ) | `Database/_production/<uid>/Core/Index.db` | `userId_sendDttm_msgId` | rỗng hoàn toàn |
-
-Cờ chọn kho là `change_media_db.should_use_new_media_db_flow` (= 1, đúng, không
-cần vá). Nếu debug mà thấy bảng `image` rỗng thì hãy kiểm tra xem đang mở đúng
-file chưa.
-
-Chuỗi gọi khi mở tab Ảnh/Video:
-`panel → _getChatMedia → getChatMedia → getMediaFromConversation → getValidMediasOfConv → repo.getMediasOfConv`
-
-## Khi bản vá trượt
-
-`apply-patches.py` thoát khác 0 và in rõ bản vá nào không neo được — nghĩa là
-Zalo đã đổi cấu trúc bundle. Cách dò lại:
-
-```bash
-flatpak run ac.d3v.ZaloLinux --remote-debugging-port=9222
-```
-
-rồi dùng Chrome DevTools Protocol. Mẹo lấy `__webpack_require__` từ ngoài:
-
-```js
-window.webpackJsonp.push([['probe'], {probe: (m,e,r) => { window.__wr = r }}, [['probe']]])
-```
-
-Sau đó `window.__wr('NDmK').default` là toàn bộ cấu hình đã hợp nhất — so nó với
-giá trị mặc định trong bundle để tìm cờ nào bị máy chủ tắt.
+> 📖 Toàn bộ chi tiết từng bản vá, hai kho media, hiệu năng, đưa lên store:
+> **[docs/KY-THUAT.md](docs/KY-THUAT.md)**
 
 ## Chạy
 
@@ -200,86 +69,14 @@ giá trị mặc định trong bundle để tìm cờ nào bị máy chủ tắt
 flatpak run ac.d3v.ZaloLinux
 ```
 
-Launcher tự `unset WAYLAND_DISPLAY` để ép X11 — Electron 22 trên Wayland không vẽ
-được cửa sổ. Dữ liệu phiên nằm ở
-`~/.var/app/ac.d3v.ZaloLinux/config/ZaloData`.
+App thoát ngay không log? `rm -f ~/.var/app/ac.d3v.ZaloLinux/config/ZaloData/Singleton*`
 
-Nếu app thoát ngay không log: `rm -f ~/.config/ZaloData/Singleton*`.
+## Đóng góp
 
-Gọi thoại/video dùng engine của tác giả snap, bật bằng `ZALO_ENABLE_LINUX_CALL=1`
-— **chưa kiểm thử**.
+Issue và pull request đều được chào đón. Đây là dự án cộng đồng — một ⭐ cũng là động lực.
 
-## Hiệu năng — đã đo, không đoán
+---
 
-| hạng mục | trước | sau | ghi chú |
-|---|---|---|---|
-| `zjxl.jxlToJpeg` (ảnh 1280×881) | 95,8 ms | **43,0 ms** | bỏ file tạm, chạy qua ống stdin→stdout |
-| `zjxl.getJxlInfo` | 0 ms | 0 ms | đọc header thuần JS, không gọi tiến trình |
-| Kết xuất | raster CPU | **raster GPU** | `--ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy` |
-
-Vì sao **không** viết addon N-API cho JXL: đo tách bạch cho thấy `djxl` giải mã
-thuần mất ~42 ms và fork chỉ 3 ms. Sau khi bỏ file tạm, shim đã ở mức 43 ms —
-tức đã chạm sàn. Addon C++ chỉ tiết kiệm thêm ~3 ms nhưng kéo cả toolchain C++
-vào Flatpak. Không đáng.
-
-Vì sao **không** viết `zimage`/libvips: app có nhà máy resizer nhiều backend
-(`LIBJXL_WASM`, `WEB_WORKER`, `MAIN`, libvips) và cấu hình gốc của Zalo là
-`enable_libvips_macos: false` — bản macOS cũng không dùng libvips mà đi đường
-OffscreenCanvas thuần Chromium. Linux vào đúng nhánh đó, không thiếu gì.
-
-Vì sao **không** viết `mp4thumb`: app có sẵn đường lui no-op
-(`generateThumbnail → Promise.resolve("")`), và ảnh đại diện video vốn lấy từ
-`thumbUrl` của máy chủ. Viết nó phải gánh thêm ffmpeg cho lợi ích rất mỏng.
-
-## Dựng tự động (GitHub Actions)
-
-`.github/workflows/build.yml` dựng cả snap lẫn Flatpak trên CI sạch, không phụ
-thuộc máy cá nhân:
-
-- Chạy tay ở tab **Actions** (chọn hồ sơ bản vá), hoặc tự chạy khi đẩy tag `v*`.
-- Job `sources` tải `.dmg` mới nhất + Electron + snap **một lần** rồi chia cho
-  hai job dựng, thay vì mỗi job tải lại ~900 MB.
-- Đẩy tag `v*` sẽ tạo GitHub Release kèm cả hai gói.
-
-Muốn CI đẩy thẳng lên Snap Store thì nạp secret `SNAPCRAFT_STORE_CREDENTIALS`:
-
-```bash
-snapcraft export-login --snaps zalo-desktop \
-  --acls package_access,package_push,package_update,package_release -
-```
-
-Vì sao dựng snap trên CI chứ không dựng ở máy: snap phải khớp `base` đã khai
-(`core22` = Ubuntu 22.04). Dựng trên máy 26.04 sẽ liên kết với `glibc` mới, và
-snap sẽ hỏng trên máy người dùng. Cùng lý do đó, `djxl`/`cjxl` trong snap lấy từ
-`stage-packages` (kho Ubuntu 22.04) chứ không chép từ máy dựng — còn bản Flatpak
-thì vẫn dùng `jxlbin/`.
-
-## Đưa lên store
-
-### Flathub
-
-- App-id `ac.d3v.ZaloLinux` khớp tên miền `d3v.ac` (bắt buộc).
-- Dùng **zypak** thay `--no-sandbox` — Flathub bắt buộc với mọi app Electron.
-  Đã kiểm chứng: tiến trình `zypak-helper child` và `zypak-sandbox` chạy thật.
-- `metainfo.xml` đã có; **còn thiếu ảnh chụp màn hình** (tối thiểu một ảnh ≥ 620×351).
-- Người duyệt sẽ hỏi về `--filesystem=home`. Câu trả lời: Zalo dùng hộp thoại file
-  của Electron chưa đi qua portal, bỏ quyền này thì không gửi/lưu file được.
-- Vì là phần mềm độc quyền và **bản đã sửa**, cần chuẩn bị bằng chứng được phép
-  phát hành để dán vào PR.
-- Manifest hiện **đóng gói kèm** mã Zalo. Nếu người duyệt không chấp nhận phát hành
-  lại binary, phải chuyển sang `extra-data` (tải trên máy người dùng lúc cài). Vướng:
-  môi trường `apply_extra` không có công cụ giải nén `.dmg`, nên phải đóng gói thêm
-  `7z` vào flatpak.
-
-### Snap Store
-
-- **Tên `zalo-linux` đã bị chiếm** (tác giả nnluc073 — chính người mà bản này mượn
-  hai native module). `snap/snapcraft.yaml` đang đề xuất `zalo-desktop`; phải chạy
-  `snapcraft register <tên>` trước khi đẩy.
-- `base: core22`, `confinement: strict`, dùng extension `gnome`.
-- Snapcraft cho tải lúc dựng nên không vướng chuyện `extra-data` như Flathub.
-
-## Còn dang dở
-
-- `zimage` (libvips) và `mp4thumb` (ffmpeg) chưa có bản thay thế native.
-- Màn "Quản lý dữ liệu → Tin nhắn media" chưa ra danh sách hội thoại.
+*Dự án cộng đồng phi lợi nhuận, **không liên kết với VNG/Zalo**. "Zalo" là thương
+hiệu của VNG; dự án chỉ đóng gói lại để dùng trên Linux, cho mục đích cá nhân.
+Giấy phép [MIT](LICENSE).*
