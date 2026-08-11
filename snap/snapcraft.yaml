@@ -11,6 +11,9 @@
 #     snapcraft
 name: zalo-desktop
 title: Zalo Desktop
+# Logo du an (Zalo + chip terminal) — Snap Store lay lam icon cua trang gioi thieu.
+# Duong dan tinh tu goc du an, khong phai tu snap/.
+icon: icon.png
 adopt-info: zalo
 summary: Ung dung nhan tin Zalo cho Linux
 description: |
