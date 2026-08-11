@@ -26,7 +26,7 @@ phát hành cho Linux.
 - ✅ Thumbnail video, khung cửa sổ gọn gàng
 - ⛔ **Chưa có gọi thoại/video** — engine gọi của Zalo chỉ có bản macOS/Windows
 
-## Cài đặt
+## Cài đặt / Cập nhập 
 
 **Một dòng lệnh** — tự chọn Flatpak/AppImage/Snap tuỳ máy bạn có gì:
 
