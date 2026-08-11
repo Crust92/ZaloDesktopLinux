@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -566,6 +566,47 @@ def p14_dbcross_binding():
     record('P14 db-cross-v4 binding Linux', True, False, 'them nhanh linux')
 
 
+# ------------------------------------------- P15 noi shim Linux vao loader NAPI-RS
+def p15_wire_shims():
+    """P5 chi CHEP index-linux.js vao module, KHONG he noi vao — khong file nao
+    trong app require no. Loader NAPI-RS goc (index.js) tren Linux tim
+    ./<mod>.linux-x64-gnu.node, khong thay thi require goi npm cung ten, roi
+
+        if (!nativeBinding) { if (loadError) throw loadError; throw new Error(...) }
+
+    => require('./zwalker/index.js') NEM LOI. Ham nativelibs.zwalker() vi vay
+    khong bao gio tra ve duoc gi, moi thong ke thu muc = 0 => man "Quan ly du
+    lieu" bao 0 B va ket "Dang tinh toan..." (do tren may that: ZaloData 2,1 GB).
+
+    Va: dat mot nhanh o DAU index.js de Linux dung thang shim JS.
+    (`return` o cap module la hop le trong CommonJS.)
+    """
+    head = ("// Linux: dung shim JS thay .node (Zalo khong phat hanh ban Linux).\n"
+            "if (process.platform === 'linux') {\n"
+            "  module.exports = require('./index-linux.js');\n"
+            "  return;\n"
+            "}\n")
+    wired, missing = [], []
+    for m in ('zwalker', 'file-utilities', 'zfile', 'zjxl'):
+        idx = os.path.join(APP, 'native', 'nativelibs', m, 'index.js')
+        shim = os.path.join(APP, 'native', 'nativelibs', m, 'index-linux.js')
+        if not os.path.isfile(idx) or not os.path.isfile(shim):
+            missing.append(m)
+            continue
+        s = open(idx, encoding='utf8', errors='surrogateescape').read()
+        if "require('./index-linux.js')" in s:
+            continue
+        if not CHECK_ONLY:
+            open(idx, 'w', encoding='utf8', errors='surrogateescape').write(head + s)
+        wired.append(m)
+    if missing:
+        record('P15 noi shim Linux vao loader', False, False, 'THIEU: ' + ','.join(missing))
+    elif wired:
+        record('P15 noi shim Linux vao loader', True, False, 'noi: ' + ','.join(wired))
+    else:
+        record('P15 noi shim Linux vao loader', False, True, 'da khop')
+
+
 # ------------------------------------------------------ P10 thumbnail video (ffmpeg)
 def p10_mp4thumb_ffmpeg():
     """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
@@ -612,7 +653,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims)):
     if enabled(_tag):
         _fn()
     else:
