@@ -38,9 +38,13 @@ for b in djxl cjxl; do
   elif command -v "$b" >/dev/null 2>&1; then cp -f "$(command -v $b)" "$APPDIR/usr/bin/$b"
   else echo "   (canh bao: khong co $b — anh .jxl se khong giai ma duoc)"; fi
 done
-for lib in libjpeg.so.8 libgif.so.7; do
-  [[ -f "$HERE/jxlbin/$lib" ]] && cp -f "$HERE/jxlbin/$lib" "$APPDIR/usr/lib/$lib"
+# Chep TAT CA thu vien djxl/cjxl can (fetch-sources.sh da do bang ldd). Danh sach
+# cung truoc day chi co libjpeg/libgif nen thieu libjxl*.so -> djxl chet luc chay.
+shopt -s nullglob
+for lib in "$HERE"/jxlbin/*.so*; do
+  cp -f "$lib" "$APPDIR/usr/lib/$(basename "$lib")"
 done
+shopt -u nullglob
 
 cp -f "$HERE/icon.png" "$APPDIR/zalo.png"
 cat > "$APPDIR/zalo.desktop" <<'EOF'

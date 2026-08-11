@@ -25,10 +25,21 @@ prepare_jxl() {
     cp -f "$(command -v $b)" "$HERE/jxlbin/$b"
     chmod +x "$HERE/jxlbin/$b"
   done
-  # runtime cua Flatpak (org.freedesktop.Platform//25.08) thieu hai thu vien nay
-  for lib in libjpeg.so.8 libgif.so.7; do
-    p="$(ldconfig -p 2>/dev/null | awk -v L="$lib" '$1==L {print $NF; exit}')"
-    [ -n "$p" ] && cp -fL "$p" "$HERE/jxlbin/$lib" || echo "   (canh bao: khong tim thay $lib tren he thong)"
+  # Chep MOI thu vien ma djxl/cjxl can, tru nhung thu chac chan co san o moi noi
+  # (glibc + libstdc++/libgcc). Truoc day day la danh sach CUNG gom dung
+  # libjpeg.so.8 + libgif.so.7 vi tuong runtime Flatpak co san libjxl — KHONG he
+  # co. Hau qua: djxl trong ca Flatpak lan AppImage chet voi
+  # "libjxl_threads.so.0.7: cannot open shared object file" => anh .jxl khong hien.
+  # Phat hien khi cai that tu goi CI roi chay thu, khong phai suy doan.
+  # Snap khong dinh loi nay vi dung stage-packages (snapcraft tu giai phu thuoc).
+  for b in djxl cjxl; do
+    ldd "$HERE/jxlbin/$b" 2>/dev/null | awk '/=> \//{print $1"\t"$3}'
+  done | sort -u | while IFS="$(printf '\t')" read -r name path; do
+    case "$name" in
+      libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|librt.so.*|ld-linux*|\
+      libstdc++.so.*|libgcc_s.so.*) continue ;;
+    esac
+    [ -f "$path" ] && cp -fL "$path" "$HERE/jxlbin/$name"
   done
   ls -la "$HERE/jxlbin"
 }

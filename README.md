@@ -28,14 +28,20 @@ phát hành cho Linux.
 
 ## Cài đặt
 
-Tải gói mới nhất ở [Releases](https://github.com/Crust92/ZaloDesktopLinux/releases).
+**Snap** — cách nhanh nhất, tự cập nhật:
 
 ```bash
-# Flatpak (khuyên dùng)
-flatpak install --user ./ac.d3v.ZaloLinux.flatpak
+sudo snap install --edge zalo-desktop
+```
+
+Hoặc tải gói ở [Releases](https://github.com/Crust92/ZaloDesktopLinux/releases):
+
+```bash
+# Flatpak (khuyên dùng cho Fedora/Arch/openSUSE)
+flatpak install --user ./ZaloDesktop-*-x86_64.flatpak
 
 # AppImage (chạy luôn, không cần cài)
-chmod +x ZaloDesktop-*.AppImage && ./ZaloDesktop-*.AppImage
+chmod +x ZaloDesktop-*-x86_64.AppImage && ./ZaloDesktop-*-x86_64.AppImage
 ```
 
 ## Dựng từ mã nguồn

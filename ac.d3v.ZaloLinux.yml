@@ -52,8 +52,9 @@ modules:
       - chmod +x /app/electron/electron /app/electron/chrome-sandbox || true
       - install -Dm755 jxlbin/djxl /app/bin/djxl
       - install -Dm755 jxlbin/cjxl /app/bin/cjxl
-      - install -Dm755 jxlbin/libjpeg.so.8 /app/lib/libjpeg.so.8
-      - install -Dm755 jxlbin/libgif.so.7 /app/lib/libgif.so.7
+      # Chep TAT CA thu vien djxl/cjxl can (fetch-sources.sh da do bang ldd).
+      # Danh sach cung truoc day thieu libjxl*.so -> djxl chet luc chay.
+      - for f in jxlbin/*.so*; do install -Dm755 "$f" "/app/lib/$(basename "$f")"; done
       - install -Dm755 zalo-launch.sh /app/bin/zalo
       - install -Dm644 icon.png /app/share/icons/hicolor/512x512/apps/ac.d3v.ZaloLinux.png
       - install -Dm644 ac.d3v.ZaloLinux.desktop /app/share/applications/ac.d3v.ZaloLinux.desktop
