@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -531,6 +531,41 @@ def p13_viewer_frame():
     record('P13 viewer co nut X', True, False, f'frame×{a+b}, titlebar×{c}')
 
 
+# ------------------------------------------------ P14 db-cross-v4 binding cho Linux
+def p14_dbcross_binding():
+    """binding.js cua db-cross-v4 chi biet darwin va Windows:
+
+        if (process.platform === 'darwin') { ...darwin/electron/<arch>... }
+        else { ...prebuilt/window/electron_x86_64... }
+
+    Linux roi vao nhanh else -> doi file Windows KHONG co, du goi da co ban Linux
+    o prebuilt/linux/electron/x64 (lay tu snap zalo-linux).
+
+    Hau qua day chuyen (da do bang CDP tren may that):
+        preload-shared-worker.js -> nativelibs/index.js -> binding.js NEM LOI
+        -> shared-worker khong dang ky duoc TaskHandler nao
+        -> "Task type is not supported" cho GENERATE_IK_KEY_PAIR / GET_BACKUP_STATUS
+        -> LOAD_IK_FAILED -> popup "Dong bo khong thanh cong".
+    Tuc la TAT CA tinh nang dong bo tin nhan / sao luu / khoi phuc deu hong.
+    """
+    p = os.path.join(APP, 'native', 'nativelibs', 'db-cross-v4', 'dist', 'binding.js')
+    if not os.path.isfile(p):
+        record('P14 db-cross-v4 binding Linux', False, False, 'thieu binding.js'); return
+    s = open(p, encoding='utf8').read()
+    if "process.platform === 'linux'" in s:
+        record('P14 db-cross-v4 binding Linux', False, True, 'da khop'); return
+    anchor = "if (process.platform === 'darwin') {"
+    if anchor not in s:
+        record('P14 db-cross-v4 binding Linux', False, False, 'KHONG khop binding.js'); return
+    new = ("if (process.platform === 'linux') {\n"
+           "    addon = require('../prebuilt/linux/electron/x64/db-cross-v4-native.node');\n"
+           "}\n"
+           "else if (process.platform === 'darwin') {")
+    if not CHECK_ONLY:
+        open(p, 'w', encoding='utf8').write(s.replace(anchor, new, 1))
+    record('P14 db-cross-v4 binding Linux', True, False, 'them nhanh linux')
+
+
 # ------------------------------------------------------ P10 thumbnail video (ffmpeg)
 def p10_mp4thumb_ffmpeg():
     """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
@@ -577,7 +612,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P5', p5_linux_shims)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims)):
     if enabled(_tag):
         _fn()
     else:

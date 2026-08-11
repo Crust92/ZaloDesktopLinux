@@ -152,12 +152,22 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { path: dist }
+
+      # install.sh chay qua `curl | bash` nen goi tai ve phai kiem duoc tinh toan ven.
+      - name: Tao SHA256SUMS
+        run: |
+          cd dist
+          find . -type f \( -name '*.snap' -o -name '*.flatpak' -o -name '*.AppImage' \) \
+            -exec sha256sum {} + | sed 's#\./[^/]*/##' > SHA256SUMS
+          cat SHA256SUMS
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/snap/*.snap
             dist/flatpak/*.flatpak
             dist/appimage/*.AppImage
+            dist/SHA256SUMS
           body: |
             Dựng tự động từ nguồn chính thức của Zalo.
             Hồ sơ bản vá: `${{ env.ZALO_PROFILE }}`.

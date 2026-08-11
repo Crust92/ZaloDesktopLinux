@@ -28,13 +28,26 @@ phát hành cho Linux.
 
 ## Cài đặt
 
-**Snap** — cách nhanh nhất, tự cập nhật:
+**Một dòng lệnh** — tự chọn Flatpak/AppImage/Snap tuỳ máy bạn có gì:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Crust92/ZaloDesktopLinux/main/install.sh | bash
+```
+
+Script tải gói từ Releases, **đối chiếu SHA256**, cài vào thư mục người dùng
+(không cần root, trừ Snap). Chọn cách cài cụ thể: `... | bash -s -- --method appimage`.
+Gỡ: `... | bash -s -- --uninstall`.
+
+> Quen kiểm tra trước khi chạy? Tải về đọc rồi hãy chạy:
+> `curl -fsSLO .../install.sh && less install.sh && bash install.sh`
+
+**Snap** — tự cập nhật:
 
 ```bash
 sudo snap install --edge zalo-desktop
 ```
 
-Hoặc tải gói ở [Releases](https://github.com/Crust92/ZaloDesktopLinux/releases):
+Hoặc tải gói thủ công ở [Releases](https://github.com/Crust92/ZaloDesktopLinux/releases):
 
 ```bash
 # Flatpak (khuyên dùng cho Fedora/Arch/openSUSE)
