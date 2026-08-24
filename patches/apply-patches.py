@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -607,6 +607,46 @@ def p15_wire_shims():
         record('P15 noi shim Linux vao loader', False, True, 'da khop')
 
 
+# ------------------------------------------- P16 bam thong bao phai MO cua so
+def p16_noti_click_show():
+    """Bam vao thong bao he thong khong mo duoc app.
+
+    Da do bang CDP tren may that: su kien click TOI DUOC renderer (bat duoc ca
+    'show' lan 'click'). Loi nam o buoc sau — handler chi goi:
+
+        m.onclick = () => { ...; a(); window.focus(); this._closeNotifyV2(i) }
+
+    `window.focus()` la API cua trang web: no chi lam viec khi cua so DANG hien.
+    Tren Linux cua so bi thu xuong khay (close-to-tray goi win.hide()) nen khong
+    the focus mot cua so dang an — phai win.show() truoc. Tren Wayland con them
+    co che chong cuop focus khien focus() don thuan khong keo cua so len.
+
+    Va: goi $zwindow.show() truoc roi moi window.focus().
+    """
+    old = 'window.focus(),this._closeNotifyV2(i)'
+    new = ('(()=>{try{$zwindow&&$zwindow.show&&$zwindow.show()}catch(_){}})(),'
+           'window.focus(),this._closeNotifyV2(i)')
+    applied = already = 0
+    files = []
+    for f in bundles():
+        s = open(f, encoding='utf8', errors='ignore').read()
+        if old not in s:
+            continue
+        if new in s:
+            already += 1
+            continue
+        if not CHECK_ONLY:
+            open(f, 'w', encoding='utf8').write(s.replace(old, new, 1))
+        applied += 1
+        files.append(rel(f))
+    if applied:
+        record('P16 bam thong bao mo cua so', True, False, ', '.join(files))
+    elif already:
+        record('P16 bam thong bao mo cua so', False, True, 'da khop')
+    else:
+        record('P16 bam thong bao mo cua so', False, False, 'KHONG khop')
+
+
 # ------------------------------------------------------ P10 thumbnail video (ffmpeg)
 def p10_mp4thumb_ffmpeg():
     """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
@@ -653,7 +693,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show)):
     if enabled(_tag):
         _fn()
     else:
