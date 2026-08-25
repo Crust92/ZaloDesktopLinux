@@ -17,6 +17,13 @@ finish-args:
   # ve dong nay — cau tra loi: bo no thi khong gui/luu file duoc.
   - --filesystem=home
   - --filesystem=xdg-download
+  # O gan ngoai (USB/NTFS/o phu). Thieu cai nay thi file tren cac o do bi
+  # sandbox chan: Zalo bao "file khong hop le, sai dinh dang" va kich thuoc = 0,
+  # vi trinh duyet thay ten file nhung doc noi dung ra rong.
+  # Fedora/udisks2 gan o /run/media/<user>, cac ban khac o /media.
+  - --filesystem=/run/media
+  - --filesystem=/media
+  - --filesystem=/mnt
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.kde.StatusNotifierWatcher
   # Electron dang ky tray qua SNI voi ten bus org.kde.StatusNotifierItem-<pid>-<n>.
