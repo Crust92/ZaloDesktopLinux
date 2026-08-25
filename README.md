@@ -70,13 +70,13 @@ Repo **không chứa binary** — tải nguồn trước rồi dựng:
 
 ## Hồ sơ bản vá
 
-Có **13 bản vá** (P1–P13) bù phần nền tảng và bật lại tính năng Zalo tắt cho Linux.
+Có **18 bản vá** (P1–P20) bù phần nền tảng và bật lại tính năng Zalo tắt cho Linux.
 Chọn bằng `--profile=`:
 
 | Hồ sơ | Gồm | Dùng khi |
 |---|---|---|
 | `compat` | P1, P5 | Chỉ đủ để chạy, không đổi hành vi. Đánh đổi: không xem được media cũ. |
-| `default` | P1–P7, P9–P13 | Bật lại mặc định của chính Zalo bị máy chủ tắt cho Linux. |
+| `default` | P1–P7, P9–P15, P17, P19, P20 | Bật lại mặc định của chính Zalo bị máy chủ tắt cho Linux, và bù các chỗ mã Zalo chỉ chạy trên Windows/macOS. |
 | `full` | + P8 | Thêm khai client Windows để mở khoá **E2EE/zCloud**. |
 
 > 📖 Toàn bộ chi tiết từng bản vá, hai kho media, hiệu năng, đưa lên store:

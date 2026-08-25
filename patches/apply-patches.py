@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -607,55 +607,6 @@ def p15_wire_shims():
         record('P15 noi shim Linux vao loader', False, True, 'da khop')
 
 
-# ------------------------------------------- P16 bam thong bao phai MO cua so
-def p16_noti_click_show():
-    """Bam vao thong bao he thong khong mo duoc app.
-
-    Da do bang CDP tren may that: su kien click TOI DUOC renderer (bat duoc ca
-    'show' lan 'click'). Loi nam o buoc sau — handler chi goi:
-
-        m.onclick = () => { ...; a(); window.focus(); this._closeNotifyV2(i) }
-
-    `window.focus()` la API cua trang web: no chi lam viec khi cua so DANG hien.
-    Tren Linux cua so bi thu xuong khay (close-to-tray goi win.hide()) nen khong
-    the focus mot cua so dang an — phai win.show() truoc. Tren Wayland con them
-    co che chong cuop focus khien focus() don thuan khong keo cua so len.
-
-    Va: goi $zwindow.show() truoc roi moi window.focus().
-    """
-    old = '"function"==typeof a&&a(),window.focus(),this._closeNotifyV2(i)'
-    # Goi show/focus TRUOC callback a(): a() la ham mo hoi thoai, co the chay lau
-    # (nguoi dung thay "chuot quay quay"). JS mot luong nen neu a() ban thi moi thu
-    # SAU no khong chay -> cua so khong bao gio duoc keo len.
-    new = ('(()=>{try{$zwindow&&$zwindow.show&&$zwindow.show();'
-           '$zwindow&&$zwindow.focus&&$zwindow.focus()}catch(_){}})(),'
-           'window.focus(),"function"==typeof a&&a(),this._closeNotifyV2(i)')
-    # Ban P16 dau tien dat show() SAU a(); chuyen ca dang do sang dang moi.
-    cu = ('"function"==typeof a&&a(),'
-          '(()=>{try{$zwindow&&$zwindow.show&&$zwindow.show()}catch(_){}})(),'
-          'window.focus(),this._closeNotifyV2(i)')
-    applied = already = 0
-    files = []
-    for f in bundles():
-        s = open(f, encoding='utf8', errors='ignore').read()
-        if new in s:
-            already += 1
-            continue
-        src = cu if cu in s else (old if old in s else None)
-        if src is None:
-            continue
-        if not CHECK_ONLY:
-            open(f, 'w', encoding='utf8').write(s.replace(src, new, 1))
-        applied += 1
-        files.append(rel(f))
-    if applied:
-        record('P16 bam thong bao mo cua so', True, False, '%d file' % applied)
-    elif already:
-        record('P16 bam thong bao mo cua so', False, True, 'da khop')
-    else:
-        record('P16 bam thong bao mo cua so', False, False, 'KHONG khop')
-
-
 # ------------------------------------------- P17 dan anh vao khung chat
 def p17_paste_image():
     """Dan anh vao khung chat khong gui duoc (khong hien gi).
@@ -718,60 +669,6 @@ def p17_paste_image():
         record('P17 dan anh vao khung chat', False, True, 'da khop')
     else:
         record('P17 dan anh vao khung chat', False, False, 'KHONG khop')
-
-
-# ------------------------------------------- P18 khai bao desktop-entry cho thong bao
-def p18_desktop_name():
-    """Bam thong bao chi thay con tro "dang khoi chay" roi khong co gi.
-
-    LUU Y: P18 PHAI di kem P19. Bat rieng P18 se lam GNOME khoi chay tien trinh
-    moi trong khi tien trinh cu chua biet keo cua so len => nguoi dung thay Zalo
-    "thoat" (that ra la cua so moi loe len roi tat).
-
-    Chuoi hoat dong dung: bam thong bao -> GNOME chay lai lenh .desktop ->
-    tien trinh moi khong lay duoc single-instance lock nen tu quit -> tien trinh
-    dang chay nhan `second-instance` -> P19 keo cua so len.
-    
-
-    Nguyen nhan (khong phai loi cua handler onclick — da kiem: click TOI DUOC app,
-    callback co chay): app KHONG BAO GIO goi `app.setDesktopName()`. Trong main.js
-    chi co `setAppUserModelId` — thu do CHI danh cho Windows.
-
-    Tren Linux, Electron gan hint `desktop-entry` cho thong bao tu gia tri
-    setDesktopName. Thieu no thi GNOME khong biet thong bao thuoc ung dung nao:
-    khi bam, GNOME di KHOI CHAY ung dung thay vi kich hoat cua so dang chay =>
-    con tro quay quay roi tat, cua so khong len.
-
-    Va: goi setDesktopName som trong bootstrap.js, ten .desktop lay theo goi
-    (Flatpak / Snap / AppImage).
-    """
-    path = os.path.join(APP, 'bootstrap.js')
-    if not os.path.isfile(path):
-        record('P18 desktop-entry cho thong bao', False, False, 'KHONG thay bootstrap.js')
-        return
-    s = open(path, encoding='utf8', errors='ignore').read()
-    if 'setDesktopName' in s:
-        record('P18 desktop-entry cho thong bao', False, True, 'da co san')
-        return
-    head = (
-        "(function(){\n"
-        "  try {\n"
-        "    if (process.platform === 'linux') {\n"
-        "      const { app } = require('electron');\n"
-        "      if (typeof app.setDesktopName === 'function') {\n"
-        "        const sn = process.env.SNAP_NAME;\n"
-        "        const name = process.env.FLATPAK_ID ? process.env.FLATPAK_ID + '.desktop'\n"
-        "                   : sn ? sn + '_' + sn + '.desktop'\n"
-        "                   : 'zalo-desktop.desktop';\n"
-        "        app.setDesktopName(name);\n"
-        "      }\n"
-        "    }\n"
-        "  } catch(_){}\n"
-        "})();\n\n"
-    )
-    if not CHECK_ONLY:
-        open(path, 'w', encoding='utf8').write(head + s)
-    record('P18 desktop-entry cho thong bao', True, False, 'bootstrap.js')
 
 
 # ------------------------------------------- P19 keo cua so len khi co the-hien-thu-hai
@@ -900,7 +797,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show), ('P17', p17_paste_image), ('P18', p18_desktop_name), ('P19', p19_second_instance_raise), ('P20', p20_noti_raise_main)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P17', p17_paste_image), ('P19', p19_second_instance_raise), ('P20', p20_noti_raise_main)):
     if enabled(_tag):
         _fn()
     else:
