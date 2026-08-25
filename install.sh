@@ -42,10 +42,22 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Khi chay qua `curl | bash`, stdin la ONG chu khong phai terminal. Flatpak/snap
+# van hoi terminal vi tri con tro (ESC[6n) roi cho tra loi tren stdin — khong ai
+# doc nen chuoi tra loi bi in ra man hinh dang "^[[28;1R". Cho stdin tro ve
+# terminal that (neu co) va tat giao dien tien trinh loe loet cua flatpak.
+run_tty() {
+  if [ -e /dev/tty ]; then
+    FLATPAK_FANCY_OUTPUT=0 "$@" </dev/tty
+  else
+    FLATPAK_FANCY_OUTPUT=0 "$@" </dev/null
+  fi
+}
+
 # ----------------------------------------------------------------- go cai dat
 if [ "$UNINSTALL" = 1 ]; then
   say "Go cai dat"
-  have flatpak && flatpak uninstall --user -y "$APPID" 2>/dev/null && c_ok "  da go ban Flatpak" || true
+  have flatpak && run_tty flatpak uninstall --user -y "$APPID" 2>/dev/null && c_ok "  da go ban Flatpak" || true
   have snap && sudo snap remove "$SNAPNAME" 2>/dev/null && c_ok "  da go ban Snap" || true
   rm -f "$BINDIR/zalo-desktop" "$APPDIR/zalo-desktop.desktop" "$ICONDIR/zalo-desktop.png" 2>/dev/null || true
   c_ok "Xong."
@@ -90,6 +102,7 @@ confirm() {
   case "$a" in n|N|no|khong) exit 1 ;; esac
 }
 
+
 download() { # $1=url $2=dich
   say "Tai $(basename "$2")"
   curl -fL --progress-bar -o "$2" "$1" || die "tai that bai"
@@ -119,11 +132,11 @@ install_flatpak() {
   # runtime nam o Flathub; them remote neu chua co
   if ! flatpak remotes --columns=name 2>/dev/null | grep -qx flathub; then
     say "Them remote Flathub (de lay runtime)"
-    flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    run_tty flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   fi
   download "$url" "$tmp/zalo.flatpak"
   say "Cai (Flatpak, che do --user)"
-  flatpak install --user -y "$tmp/zalo.flatpak"
+  run_tty flatpak install --user -y "$tmp/zalo.flatpak"
   c_ok "Xong. Chay bang:  flatpak run $APPID"
 }
 
@@ -160,7 +173,7 @@ EOF
 install_snap() {
   have snap || die "chua co snapd. Fedora: sudo dnf install snapd && sudo ln -s /var/lib/snapd/snap /snap"
   say "Cai tu Snap Store (kenh edge)"
-  sudo snap install --edge "$SNAPNAME"
+  run_tty sudo snap install --edge "$SNAPNAME"
   c_ok "Xong. Chay bang:  $SNAPNAME"
 }
 
