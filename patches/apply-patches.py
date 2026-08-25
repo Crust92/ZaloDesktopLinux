@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -647,6 +647,70 @@ def p16_noti_click_show():
         record('P16 bam thong bao mo cua so', False, False, 'KHONG khop')
 
 
+# ------------------------------------------- P17 dan anh vao khung chat
+def p17_paste_image():
+    """Dan anh vao khung chat khong gui duoc (khong hien gi).
+
+    Da truy bang CDP tren may that:
+      - su kien paste TOI DUOC app, clipboardData co File image/png dung dung luong
+      - nhung khong ham nao trong luong anh (_sendExcel/_uploadDragPhoto/
+        handleDragPhoto/addImageToPreview) duoc goi
+      - goi TRUC TIEP chatController._uploadDragPhoto(file) thi CHAY (DOM +24 phan tu)
+
+    Nguyen nhan: nhanh xu ly anh goi ham z(), ma z() chi goi uploadPhoto BEN TRONG
+    .then() cua `$zscreencap.getClipboard(...)`:
+
+        z=(t,n,a)=>{G||(G=!0,$zscreencap.getClipboard(uid).then(...uploadPhoto...))}
+
+    Do bang CDP: $zscreencap.getClipboard() KHONG BAO GIO resolve tren Linux (cho
+    12s van treo). Vi vay uploadPhoto khong bao gio duoc goi. Te hon: co khoa G
+    duoc bat truoc khi cho, va chi duoc go trong .then() — nen dan lan dau treo la
+    MOI lan dan sau deu bi bo qua im lang.
+
+    Va: goi thang uploadPhoto, giu nguyen duong cu lam du phong.
+    """
+    # Hai nhanh anh, CA HAI deu cho $zscreencap.getClipboard():
+    #   z(t,n,a)   — dan ANH THO (chup man hinh)
+    #   W(t,n="")  — dan FILE ANH (chep tu trinh quan ly tep)
+    # Nguoi dung bao: dan file .jpg khong nhan, file khac thi nhan — dung vi file
+    # thuong di duong uploadFileForMac (khong qua zscreencap), con anh thi qua W.
+    subs = [
+        ('z=(t,n,a)=>{G||(G=!0,$zscreencap.getClipboard(',
+         'z=(t,n,a)=>{try{if(e.uploadPhoto&&a){a.name||(a.name="clipboard.png");'
+         'e.uploadPhoto([a],e.currentUserId);return}}catch(_){}'
+         'G||(G=!0,$zscreencap.getClipboard('),
+        ('W=(t,n="")=>{G||(G=!0,$zscreencap.getClipboard(',
+         'W=(t,n="")=>{try{if(e.uploadPhoto&&Array.isArray(t)&&t.length>0){'
+         'e.uploadPhoto(t,e.currentUserId);return}}catch(_){}'
+         'G||(G=!0,$zscreencap.getClipboard('),
+    ]
+    applied = already = 0
+    files = []
+    for f in bundles():
+        s = open(f, encoding='utf8', errors='ignore').read()
+        orig = s
+        hit = 0
+        for old, new in subs:
+            if new in s:
+                hit += 1
+                continue
+            if old in s:
+                s = s.replace(old, new, 1)
+        if s != orig:
+            if not CHECK_ONLY:
+                open(f, 'w', encoding='utf8').write(s)
+            applied += 1
+            files.append(rel(f))
+        elif hit:
+            already += 1
+    if applied:
+        record('P17 dan anh vao khung chat', True, False, '%d file' % applied)
+    elif already:
+        record('P17 dan anh vao khung chat', False, True, 'da khop')
+    else:
+        record('P17 dan anh vao khung chat', False, False, 'KHONG khop')
+
+
 # ------------------------------------------------------ P10 thumbnail video (ffmpeg)
 def p10_mp4thumb_ffmpeg():
     """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
@@ -693,7 +757,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show), ('P17', p17_paste_image)):
     if enabled(_tag):
         _fn()
     else:

@@ -20,6 +20,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const fsp = require('fs').promises;
 const { spawn } = require('child_process');
 
 const SUCCESS = 1;
@@ -121,14 +123,47 @@ function parseJxlSize(buf) {
   } catch (_) { return null; }
 }
 
+// ---------------------------------------------------------------- chay qua FILE
+// libjxl 0.7 (ban co trong Ubuntu 24.04 / core24) KHONG doc duoc stdin va
+// KHONG co --output_format:
+//     cjxl - - -d 1      -> "Reading image data failed."   (0 byte)
+//     djxl - - ...       -> exit 1
+// Cu phap dung la:  cjxl IN OUT [-d N]  /  djxl IN OUT   (dinh dang theo DUOI file).
+// Ban shim cu dung ong (-) nen MOI thao tac JXL deu that bai: dan anh vao khung
+// chat bao "Handle blob fail", va anh .jxl cung khong hien duoc.
+let tmpSeq = 0;
+function tmpPath(ext) {
+  return path.join(os.tmpdir(), `zjxl-${process.pid}-${Date.now()}-${tmpSeq++}${ext}`);
+}
+
+async function runFile(bin, mkArgs, input, inExt, outExt, timeout) {
+  const inP = tmpPath(inExt), outP = tmpPath(outExt);
+  try {
+    if (input) await fsp.writeFile(inP, input);
+    const r = await pipe(bin, mkArgs(inP, outP), null, timeout);
+    let data = null;
+    try { data = await fsp.readFile(outP); } catch (_) {}
+    return { err: r.err, data, stderr: r.stderr };
+  } catch (e) {
+    return { err: e, data: null, stderr: String(e && e.message || e) };
+  } finally {
+    fsp.unlink(inP).catch(() => {});
+    fsp.unlink(outP).catch(() => {});
+  }
+}
+
+function pngSize(buf) {
+  if (!buf || buf.length < 24) return null;
+  if (buf[0] !== 0x89 || buf[1] !== 0x50) return null;
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+
 async function getJxlInfo(input) {
   const buf = toBuffer(input);
   let size = parseJxlSize(buf);
   if (!size) {
-    // du phong: hoi djxl, van khong cham dia
-    const r = await pipe(DJXL, ['-', '-', '--output_format', 'ppm', '--num_threads=1'], buf, 15000);
-    const m = /(\d+)\s*x\s*(\d+)/.exec(r.stderr || '');
-    if (m) size = { width: parseInt(m[1], 10), height: parseInt(m[2], 10) };
+    const r = await runFile(DJXL, (i, o) => [i, o], buf, '.jxl', '.png', 15000);
+    size = pngSize(r.data);
   }
   if (!size) return { status_code: FAILURE };
   return {
@@ -141,11 +176,14 @@ async function getJxlInfo(input) {
 
 async function jxlToJpeg(input) {
   const buf = toBuffer(input);
-  // uu tien tai tao JPEG goc (khi anh duoc encode tu JPEG thi day la lossless)
-  let r = await pipe(DJXL, ['-', '-', '--output_format', 'jpeg'], buf);
+  // 1) tai tao JPEG goc (lossless khi anh von duoc encode tu JPEG)
+  let r = await runFile(DJXL, (i, o) => [i, o], buf, '.jxl', '.jpg', 20000);
   if (r.data && r.data.length) return { status_code: SUCCESS, data: r.data };
-  // du phong: JXL -> PNG (anh khong tai tao duoc JPEG)
-  r = await pipe(DJXL, ['-', '-', '--output_format', 'png'], buf);
+  // 2) khong tai tao duoc -> ep giai ma ra pixel roi encode JPEG moi
+  r = await runFile(DJXL, (i, o) => [i, o, '-j'], buf, '.jxl', '.jpg', 20000);
+  if (r.data && r.data.length) return { status_code: SUCCESS, data: r.data };
+  // 3) du phong: tra ve PNG
+  r = await runFile(DJXL, (i, o) => [i, o], buf, '.jxl', '.png', 20000);
   if (r.data && r.data.length) return { status_code: SUCCESS, data: r.data };
   return { status_code: FAILURE };
 }
@@ -158,21 +196,24 @@ async function jxlDecompressMulti(input) {
 async function resizeJxl(input, width, height) {
   const buf = toBuffer(input);
   const w = Number(width) || 0, h = Number(height) || 0;
-  const dec = await pipe(DJXL, ['-', '-', '--output_format', 'png'], buf);
+  const dec = await runFile(DJXL, (i, o) => [i, o], buf, '.jxl', '.png', 20000);
   if (!dec.data || !dec.data.length) return { status_code: FAILURE };
   let png = dec.data;
   if (w > 0 || h > 0) {
-    const rs = await pipe('magick', ['png:-', '-resize', (w || '') + 'x' + (h || ''), 'png:-'], png);
+    // Flatpak/snap KHONG co ImageMagick; ffmpeg thi co (da dong goi cho P10).
+    const scale = `scale=${w > 0 ? w : -1}:${h > 0 ? h : -1}`;
+    const rs = await runFile('ffmpeg', (i, o) => ['-y', '-loglevel', 'error', '-i', i, '-vf', scale, o],
+                             png, '.png', '.png', 20000);
     if (rs.data && rs.data.length) png = rs.data;
   }
-  const enc = await pipe(CJXL, ['-', '-', '-d', '1', '--num_threads=1'], png, 30000);
+  const enc = await runFile(CJXL, (i, o) => [i, o, '-d', '1'], png, '.png', '.jxl', 30000);
   if (enc.data && enc.data.length) return { status_code: SUCCESS, data: enc.data };
   return { status_code: SUCCESS, data: png }; // it nhat tra ve anh giai ma duoc
 }
 
 async function bitmapToJxl(input) {
   const buf = toBuffer(input);
-  const enc = await pipe(CJXL, ['-', '-', '-d', '1'], buf, 30000);
+  const enc = await runFile(CJXL, (i, o) => [i, o, '-d', '1'], buf, '.png', '.jxl', 30000);
   if (enc.data && enc.data.length) return { status_code: SUCCESS, data: enc.data };
   return { status_code: FAILURE };
 }
@@ -195,5 +236,5 @@ module.exports = {
   bitmapToJxl,
   generatePreview: resizeJxl,
   moduleReady,
-  apiVersion: '1.1.0-linux-libjxl-pipe',
+  apiVersion: '2.0.0-linux-libjxl-file',
 };
