@@ -45,8 +45,8 @@ CHECK_ONLY = '--check' in sys.argv
 #            nhung khai sai nen tang voi may chu. Xem README muc "Vi sao P8".
 PROFILES = {
     'compat':  ['P1', 'P5'],
-    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19'],
-    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19'],
+    'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20'],
+    'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -809,6 +809,51 @@ def p19_second_instance_raise():
     record('P19 keo cua so khi kich hoat lai', True, False, 'main.js')
 
 
+# ------------------------------------------- P20 bam thong bao: keo cua so o TIEN TRINH CHINH
+def p20_noti_raise_main():
+    """Bam thong bao khong mo duoc cua so — sua o TIEN TRINH CHINH thay vi renderer.
+
+    Vi sao P16 (va cac ban truoc) khong du:
+      - P16 vá trong renderer, chi goi duoc $zwindow.show()/focus().
+      - $zwindow KHONG co `restore()`. Tren Linux, show() KHONG dua cua so ra khoi
+        trang thai thu nho (Iconic) — da do bang xprop: bam xong van Iconic.
+      - Meo keo cua so len that su (setAlwaysOnTop(true)->focus->setAlwaysOnTop(false))
+        can BrowserWindow day du, chi co o tien trinh chinh.
+
+    Trong main.js, chinh cho tao Notification co san cach lay cua so chinh:
+        static sendIpcToRenderer(e,t){const r=n("qkcG").getMainWindow(); ...}
+    Them mot ham tinh zRaiseMain() dung cung `n("qkcG").getMainWindow()` roi goi
+    no ngay trong `l.on("click", ...)`, TRUOC khi gui IPC sang renderer.
+    """
+    p = os.path.join(APP, 'main-dist', 'main.js')
+    if not os.path.isfile(p):
+        record('P20 bam thong bao keo cua so', False, False, 'thieu main.js')
+        return
+    s = open(p, encoding='utf8', errors='surrogateescape').read()
+    if 'zRaiseMain' in s:
+        record('P20 bam thong bao keo cua so', False, True, 'da khop')
+        return
+    a_old = ('static sendIpcToRenderer(e,t){const r=n("qkcG").getMainWindow();'
+             'r&&!r.isDestroyed()&&r.webContents.send(e,t)}')
+    a_new = a_old + ('static zRaiseMain(){try{const w=n("qkcG").getMainWindow();'
+                     'if(w&&!w.isDestroyed()){'
+                     'try{w.isMinimized&&w.isMinimized()&&w.restore()}catch(_){}'
+                     'try{w.show()}catch(_){}'
+                     'try{w.setAlwaysOnTop(!0),w.focus(),'
+                     'setTimeout((()=>{try{w&&!w.isDestroyed()&&(w.setAlwaysOnTop(!1),w.focus())}'
+                     'catch(_){}}),300)}catch(_){}'
+                     '}}catch(_){}}')
+    b_old = 'l.on("click",(()=>{sr.sendIpcToRenderer(ir.ON_CLICK,pr(c,a))}))'
+    b_new = 'l.on("click",(()=>{sr.zRaiseMain(),sr.sendIpcToRenderer(ir.ON_CLICK,pr(c,a))}))'
+    if a_old not in s or b_old not in s:
+        record('P20 bam thong bao keo cua so', False, False, 'KHONG khop main.js')
+        return
+    if not CHECK_ONLY:
+        s = s.replace(a_old, a_new, 1).replace(b_old, b_new, 1)
+        open(p, 'w', encoding='utf8', errors='surrogateescape').write(s)
+    record('P20 bam thong bao keo cua so', True, False, 'main.js')
+
+
 # ------------------------------------------------------ P10 thumbnail video (ffmpeg)
 def p10_mp4thumb_ffmpeg():
     """mp4thumb khong co ban Linux -> throw 'not available'. Thay bang backend
@@ -855,7 +900,7 @@ print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show), ('P17', p17_paste_image), ('P18', p18_desktop_name), ('P19', p19_second_instance_raise)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P16', p16_noti_click_show), ('P17', p17_paste_image), ('P18', p18_desktop_name), ('P19', p19_second_instance_raise), ('P20', p20_noti_raise_main)):
     if enabled(_tag):
         _fn()
     else:
