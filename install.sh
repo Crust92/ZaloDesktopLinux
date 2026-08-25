@@ -37,7 +37,20 @@ while [ $# -gt 0 ]; do
     --version=*) VERSION="${1#*=}"; shift ;;
     --uninstall) UNINSTALL=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)
+      # KHONG doc tu "$0": khi chay qua `curl | bash` thi $0 la "bash", khong phai file.
+      cat <<'HELP'
+Cai Zalo Desktop for Linux tu GitHub Release.
+
+  curl -fsSL https://raw.githubusercontent.com/Crust92/ZaloDesktopLinux/main/install.sh | bash
+
+Tuy chon:
+  --method flatpak|appimage|snap|auto   (mac dinh: auto)
+  --version v26.8.10-8                  (mac dinh: ban moi nhat)
+  --uninstall                           go cai dat
+  --yes                                 khong hoi
+HELP
+      exit 0 ;;
     *) die "tham so la: $1 (dung --help)" ;;
   esac
 done
@@ -47,7 +60,10 @@ done
 # doc nen chuoi tra loi bi in ra man hinh dang "^[[28;1R". Cho stdin tro ve
 # terminal that (neu co) va tat giao dien tien trinh loe loet cua flatpak.
 run_tty() {
-  if [ -e /dev/tty ]; then
+  # `[ -e /dev/tty ]` KHONG du: file luon ton tai nhung MO duoc hay khong con tuy
+  # co terminal dieu khien hay khong (cron, CI, tien trinh nen deu khong co).
+  # Phai thu mo that.
+  if : </dev/tty 2>/dev/null; then
     FLATPAK_FANCY_OUTPUT=0 "$@" </dev/tty
   else
     FLATPAK_FANCY_OUTPUT=0 "$@" </dev/null
