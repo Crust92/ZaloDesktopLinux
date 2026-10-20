@@ -47,7 +47,8 @@ PROFILES = {
     'compat':  ['P1', 'P5'],
     'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
     'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
-    'long':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20', 'P21', 'P22'],
+    # full + P21/P22: bam tai la luu thang vao thu muc mac dinh, khong mo hop thoai.
+    'full-nodialog': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20', 'P21', 'P22'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
