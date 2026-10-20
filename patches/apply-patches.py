@@ -47,6 +47,7 @@ PROFILES = {
     'compat':  ['P1', 'P5'],
     'default': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
     'full':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20'],
+    'long':    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13', 'P14', 'P15', 'P17', 'P19', 'P20', 'P21', 'P22'],
 }
 PROFILE = 'default'
 for _a in sys.argv[1:]:
@@ -792,12 +793,103 @@ def p10_mp4thumb_ffmpeg():
     record('P10 thumbnail video ffmpeg', True, False, 'ffmpeg backend')
 
 
+# ------------------------------------------- P21 tai ve thang thu muc mac dinh
+def p21_download_no_dialog():
+    """Bam tai anh/video/file/ghi am la luu thang vao thu muc mac dinh, khong hoi.
+
+    Moi nut tai thu cong cua Zalo deu truyen `saveAs:!0`, nen bon handler
+    (_handlePhotoType/_handleVideoType/_handleVoiceType/_handleFileType) luon mo
+    hop thoai luu. Nhanh con lai cua chinh cac handler do da san: luu vao
+    `getDefaultPath()` (= config `new_zrf_path`, doi duoc trong Cai dat ->
+    "File duoc luu tai thu muc"). Va: bo qua co saveAs, giu nguyen nhanh mac dinh.
+    Muon lui: bo P21 khoi ho so roi dung lai.
+    """
+    subs = [
+        ('a.saveAs?t(this._handlePhotoDialog(e))', '!1?t(this._handlePhotoDialog(e))'),
+        ('a.saveAs?t(this._handleVideoDialog(e))', '!1?t(this._handleVideoDialog(e))'),
+        ('a.saveAs?t(this._handleVoiceDialog(e))', '!1?t(this._handleVoiceDialog(e))'),
+        ('if(a.saveAs)return t(this._handleFileDialog(e))', 'if(!1)return t(this._handleFileDialog(e))'),
+    ]
+    applied = already = 0
+    for f in bundles():
+        s = open(f, encoding='utf8', errors='ignore').read()
+        orig = s
+        hit = 0
+        for old, new in subs:
+            if new in s:
+                hit += 1
+            elif old in s:
+                s = s.replace(old, new)
+        if s != orig:
+            if not CHECK_ONLY:
+                open(f, 'w', encoding='utf8').write(s)
+            applied += 1
+        elif hit == len(subs):
+            already += 1
+    if applied:
+        record('P21 tai ve khong hoi thu muc', True, False, '%d file' % applied)
+    elif already:
+        record('P21 tai ve khong hoi thu muc', False, True, 'da khop')
+    else:
+        record('P21 tai ve khong hoi thu muc', False, False, 'KHONG khop')
+
+
+# --------------------------------------- P22 tai blob: luu thang, khong hoi
+P22_MARK = '/* P22 blob download auto-save */'
+P22_CODE = P22_MARK + r"""
+(function(){
+  try {
+    if (process.platform !== 'linux') return;
+    const { app } = require('electron');
+    const fs = require('fs'), path = require('path'), os = require('os');
+    const dir = () => {
+      try {
+        const c = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'config.json'), 'utf8'));
+        const p = c.new_zrf_path && c.new_zrf_path.path;
+        if (p && path.isAbsolute(p) && fs.existsSync(p)) return p;
+      } catch (_) {}
+      return path.join(process.env.SNAP_REAL_HOME || os.homedir(), 'Downloads');
+    };
+    const uniq = (d, name) => {
+      const ext = path.extname(name), base = path.basename(name, ext);
+      let p = path.join(d, name), i = 1;
+      while (fs.existsSync(p)) p = path.join(d, base + ' (' + (i++) + ')' + ext);
+      return p;
+    };
+    app.on('session-created', (s) => s.on('will-download', (_e, item) => {
+      try { if (!item.getSavePath()) item.setSavePath(uniq(dir(), item.getFilename() || 'zalo-download')); } catch (_) {}
+    }));
+  } catch (_) {}
+})();
+"""
+
+
+def p22_blob_download_autosave():
+    """Tai anh tu khung chat van mo hop thoai "Save as" sau P21.
+
+    Do bang hook will-download trong main: nut tai anh di duong trinh duyet (the
+    <a download> tro toi `blob:`), KHONG qua bon handler cua P21. Electron thay
+    savePath rong thi tu mo hop thoai. Va: dat savePath = thu muc mac dinh cua
+    Zalo (config `new_zrf_path` neu la duong dan tuyet doi, khong thi ~/Downloads
+    that), trung ten thi them " (1)". Phai dang ky luc tao session nen chen vao
+    dau bootstrap.js.
+    """
+    path = os.path.join(APP, 'bootstrap.js')
+    s = open(path, encoding='utf8').read()
+    if P22_MARK in s:
+        record('P22 tai blob luu thang thu muc', False, True, 'da co san')
+        return
+    if not CHECK_ONLY:
+        open(path, 'w', encoding='utf8').write(P22_CODE + '\n' + s)
+    record('P22 tai blob luu thang thu muc', True, False, 'bootstrap.js')
+
+
 print('Ap ban va len: %s%s' % (APP, '  [CHI KIEM TRA]' if CHECK_ONLY else ''))
 print('Ho so: %s  (%s)' % (PROFILE, ', '.join(sorted(ACTIVE))))
 for _tag, _fn in (('P1', p1_bootstrap), ('P2', p2_sync_isenable), ('P3', p3_load_media_enable),
                   ('P4', p4_load_media_config), ('P6', p6_file_enable_cloud),
                   ('P7', p7_never_expire), ('P8', p8_client_type), ('P9', p9_enable_call),
-                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P17', p17_paste_image), ('P19', p19_second_instance_raise), ('P20', p20_noti_raise_main)):
+                  ('P10', p10_mp4thumb_ffmpeg), ('P11', p11_tray_icon), ('P12', p12_linux_quit), ('P13', p13_viewer_frame), ('P14', p14_dbcross_binding), ('P5', p5_linux_shims), ('P15', p15_wire_shims), ('P17', p17_paste_image), ('P19', p19_second_instance_raise), ('P20', p20_noti_raise_main), ('P21', p21_download_no_dialog), ('P22', p22_blob_download_autosave)):
     if enabled(_tag):
         _fn()
     else:
